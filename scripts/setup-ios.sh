@@ -189,8 +189,65 @@ cat <<'NOTE'
 
 NOTE
 
+# Разбор частых поражений. xcodebuild пишет причину одной строкой среди
+# десятков тысяч, а поверх неё ещё и сообщение, которое говорит о другом:
+# при выключенном «Режиме разработчика» это таймаут ожидания устройства,
+# при отказе связки ключей — «Command CodeSign failed». Искать настоящую
+# строку в логе — работа не для того, кто первый раз собирает приложение.
+explain_failure() {
+  log="$1"
+  [ -f "$log" ] || return 0
+
+  if grep -q "errSecInternalComponent" "$log"; then
+    fail "codesign не смог воспользоваться ключом вашего сертификата
+(errSecInternalComponent). Сам ключ на месте — закрыт доступ к нему.
+
+Разрешить (спросит пароль от Mac, вводится вслепую, никуда не сохраняется):
+  read -s -p \"Пароль: \" PW; echo; security unlock-keychain -p \"\$PW\" ~/Library/Keychains/login.keychain-db && security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k \"\$PW\" ~/Library/Keychains/login.keychain-db; unset PW
+
+То же самое мышкой: «Связка ключей» → Вход → Мои сертификаты →
+раскрыть Apple Development → двойной клик по ключу → Контроль доступа →
+«Разрешить всем программам доступ к этому объекту» → Сохранить.
+
+Потом запустите скрипт заново."
+  fi
+
+  if grep -q "Developer Mode disabled" "$log"; then
+    fail "На телефоне выключен «Режим разработчика».
+Настройки → Конфиденциальность и безопасность → в самом низу
+«Режим разработчика» → включить → перезагрузка → после разблокировки
+подтвердить «Включить». Потом запустите скрипт заново."
+  fi
+
+  if grep -q "MapLibre/MapLibre.h' file not found" "$log"; then
+    fail "Не подключился нативный SDK MapLibre.
+Проверьте, что в app.json в списке plugins есть строка
+«@maplibre/maplibre-react-native» — её добавляет config-плагин, без неё
+Podfile не подтягивает MapLibre. Потом запустите скрипт заново."
+  fi
+
+  if grep -q "No profiles for" "$log"; then
+    fail "Xcode не смог выпустить профиль подписи.
+Выпустите его один раз явно, разрешив регистрацию устройства:
+  cd ios && xcodebuild -workspace KM.xcworkspace -scheme KM -configuration Debug -destination generic/platform=iOS -allowProvisioningUpdates -allowProvisioningDeviceRegistration
+Потом запустите скрипт заново."
+  fi
+
+  fail "Сборка не удалась, и знакомых мне причин в логе нет.
+Последние строки лога (полный — в $log):
+
+$(tail -15 "$log")"
+}
+
 step "Собираю и ставлю на телефон"
+set +e
 npx expo run:ios --device
+build_status=$?
+set -e
+if [ "$build_status" -ne 0 ]; then
+  explain_failure ".expo/xcodebuild.log"
+  exit 1
+fi
 
 cat <<'NOTE'
 
