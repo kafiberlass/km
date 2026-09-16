@@ -36,6 +36,7 @@
       "expo-router",
       "expo-dev-client",
       "expo-font",
+      "@maplibre/maplibre-react-native",
       [
         "expo-location",
         {
