@@ -10,7 +10,7 @@
     "backgroundColor": "#2E1F17",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.example.km",
+      "bundleIdentifier": "com.kafiberlass.km",
       "infoPlist": {
         "UIBackgroundModes": ["location", "fetch"],
         "NSLocationWhenInUseUsageDescription": "Нужно, чтобы открывать карту во время прогулки.",
@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "package": "com.example.km",
+      "package": "com.kafiberlass.km",
       "edgeToEdgeEnabled": true,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
