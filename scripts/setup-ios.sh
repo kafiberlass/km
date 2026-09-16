@@ -50,11 +50,29 @@ if ! xcodebuild -version >/dev/null 2>&1; then
 Выполните: sudo xcodebuild -license accept — и запустите скрипт заново."
 fi
 
+# Homebrew на Apple Silicon живёт в /opt/homebrew и попадает в PATH только
+# через ~/.zprofile. Если его туда не дописали — brew есть, но не находится;
+# классическая ловушка после свежей установки, поэтому ищем руками.
+if ! command -v brew >/dev/null 2>&1; then
+  for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    [ -x "$candidate" ] && eval "$("$candidate" shellenv)" && break
+  done
+fi
+
 if ! command -v pod >/dev/null 2>&1; then
-  fail "Не найден CocoaPods — без него нативные модули не соберутся.
-Установите: brew install cocoapods
-Если нет самого brew — инструкция на https://brew.sh
-После установки запустите скрипт заново."
+  if command -v brew >/dev/null 2>&1; then
+    step "Ставлю CocoaPods (его не было, Homebrew есть)"
+    brew install cocoapods
+  else
+    fail "Не найдены ни CocoaPods, ни Homebrew, через который его ставят.
+1. Поставьте Homebrew — команда с https://brew.sh (спросит пароль от Mac,
+   он вводится вслепую, символы не отображаются — это нормально).
+2. На Mac с процессором M1/M2/M3 после установки выполните ещё две строки,
+   иначе brew не найдётся:
+     echo 'eval \"\$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile
+     eval \"\$(/opt/homebrew/bin/brew shellenv)\"
+3. Запустите скрипт заново — CocoaPods он поставит сам."
+  fi
 fi
 
 bold "  Xcode $(xcodebuild -version | head -1 | awk '{print $2}'), Node $(node -v), CocoaPods $(pod --version)"
