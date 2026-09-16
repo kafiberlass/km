@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "КМ",
+    "slug": "km",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "km",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#2E1F17",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.example.km",
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch"],
+        "NSLocationWhenInUseUsageDescription": "Нужно, чтобы открывать карту во время прогулки.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Чтобы карта открывалась, даже когда приложение свёрнуто.",
+        "NSMotionUsageDescription": "Чтобы отличать прогулку от поездки и экономить батарею."
+      }
+    },
+    "android": {
+      "package": "com.example.km",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "ACTIVITY_RECOGNITION",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "locationAlwaysAndWhenInUsePermission": "Чтобы карта открывалась, даже когда приложение свёрнуто."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        { "backgroundColor": "#2E1F17", "resizeMode": "contain" }
+      ]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}
