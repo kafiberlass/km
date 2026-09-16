@@ -99,6 +99,14 @@ npm run setup:ios
 Фоновая геолокация от этого не страдает: `UIBackgroundModes` лежит
 в Info.plist, а не в entitlements, и с бесплатной подписью работает.
 
+**Scene life cycle.** `plugins/withSceneLifecycle.js` дописывает в Info.plist
+scene-манифест и подключает `EXExpoAppSceneDelegate`. Без этого iOS 27 SDK
+не запускает приложение вовсе: процесс стартует и гаснет с «UIScene life
+cycle is required for apps built with this SDK» — внешне мгновенный вылет
+с чёрным экраном и выходом с кодом 0, без крэш-репорта. Всё нужное в Expo 57
+уже есть, шаблон prebuild это просто не подключает; когда догонит — плагин
+можно удалить.
+
 Чего на iOS нет: аналога Lockito. Подменять координаты можно либо
 GPX-плеером в дев-панели, либо через Xcode — Debug → Simulate Location.
 

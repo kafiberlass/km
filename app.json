@@ -37,6 +37,7 @@
       "expo-dev-client",
       "expo-font",
       "@maplibre/maplibre-react-native",
+      "./plugins/withSceneLifecycle",
       [
         "expo-location",
         {
