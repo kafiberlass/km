@@ -79,8 +79,50 @@ bold "  Xcode $(xcodebuild -version | head -1 | awk '{print $2}'), Node $(node -
 
 # Сертификат подписи. Expo сообщает о его отсутствии только после установки
 # зависимостей и prebuild — двадцать минут ради ошибки, которую видно сразу.
+#
+# Случая два, и различать их обязательно: сертификата нет вовсе (нужен вход
+# в Apple ID) или он есть, но недействителен. Второе — почти всегда нехватка
+# промежуточных сертификатов Apple в связке ключей: без них цепочка не
+# сходится, security показывает «1 identities found / 0 valid», а Expo
+# говорит ровно то же, что и при отсутствии сертификата, и совет «заведите
+# сертификат» уводит в сторону.
 if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Development"; then
-  fail "Xcode не знает ваш Apple ID, поэтому подписывать сборку нечем.
+  if security find-identity -p codesigning 2>/dev/null | grep -q "Apple Development"; then
+    step "Сертификат есть, но недействителен — доставляю промежуточные сертификаты Apple"
+    tmp="$(mktemp -d)"
+    (
+      cd "$tmp"
+      # Поколения WWDR выпускаются по мере истечения предыдущих, и какое
+      # нужно — зависит от даты выпуска сертификата. Качаем все известные,
+      # несуществующие просто не скачаются.
+      for name in AppleWWDRCAG2 AppleWWDRCAG3 AppleWWDRCAG4 AppleWWDRCAG5 AppleWWDRCAG6 \
+                  AppleRootCA-G2 AppleRootCA-G3; do
+        curl -fsLO "https://www.apple.com/certificateauthority/$name.cer" || true
+      done
+      curl -fsLO "https://www.apple.com/appleca/AppleIncRootCertificate.cer" || true
+      for file in *.cer; do
+        [ -f "$file" ] && security import "$file" -k ~/Library/Keychains/login.keychain-db >/dev/null 2>&1 || true
+      done
+    )
+    rm -rf "$tmp"
+
+    if security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Development"; then
+      bold "  Готово, сертификат стал действительным."
+    else
+      fail "Сертификат в связке ключей есть, но остаётся недействительным.
+Промежуточные сертификаты Apple я доставил — не помогло. Чаще всего это
+значит, что рядом лежит просроченный WWDR предыдущего поколения и он
+перебивает новый.
+
+Посмотреть, чем подписан ваш сертификат и что есть в связке:
+  security find-certificate -a -c \"Worldwide Developer Relations\" | grep labl
+
+Просроченные строки удаляются в приложении «Связка ключей» (Keychain
+Access): вкладка «Мои сертификаты», правый клик по просроченному WWDR →
+«Удалить»."
+    fi
+  else
+    fail "Xcode не знает ваш Apple ID, поэтому подписывать сборку нечем.
 Это единственный шаг, который нельзя сделать за вас — вход в аккаунт.
 
 1. Откройте Xcode → меню Xcode → Settings… (Cmd+,) → вкладка Accounts.
@@ -90,6 +132,7 @@ if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Devel
 
 Платная подписка для этого не нужна: личный аккаунт выпускает сертификат
 бесплатно. Дальше запустите скрипт заново."
+  fi
 fi
 
 step "Ставлю зависимости (пара минут)"
