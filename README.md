@@ -264,6 +264,14 @@ OpenFreeMap живёт на пожертвованиях и SLA не даёт. �
 по полигонам из `cellsToMultiPolygon` (h3-js умеет это сам, turf не нужен) —
 двигается идеально, но края будут шестиугольные и без размытия.
 
+**TextDecoder и h3-js.** `src/core/polyfills/textDecoder.ts` подменяет
+глобальный `TextDecoder` на обёртку, умеющую utf-16le. Без неё приложение
+падает на первом же импорте: h3-js собран эмскриптеном и при загрузке
+модуля делает `new TextDecoder("utf-16le")`, а в React Native есть только
+utf-8. Полифил обязан выполниться раньше остального кода — ради этого
+в проекте свой `index.js` вместо `expo-router/entry` в `package.json`.
+Регрессия закрыта тестом `tests/h3-boot.test.ts`.
+
 **Шрифты.** В `src/core/theme/tokens.ts` объявлены `Oswald` и `VT323`,
 но файлов нет и `expo-font` их не грузит — сейчас используются системные.
 Оба шрифта под OFL, скачиваются с Google Fonts, кладутся в `assets/fonts`.
