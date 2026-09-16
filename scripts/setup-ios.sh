@@ -202,8 +202,9 @@ explain_failure() {
     fail "codesign не смог воспользоваться ключом вашего сертификата
 (errSecInternalComponent). Сам ключ на месте — закрыт доступ к нему.
 
-Разрешить (спросит пароль от Mac, вводится вслепую, никуда не сохраняется):
-  read -s -p \"Пароль: \" PW; echo; security unlock-keychain -p \"\$PW\" ~/Library/Keychains/login.keychain-db && security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k \"\$PW\" ~/Library/Keychains/login.keychain-db; unset PW
+Разрешить (спросит пароль от Mac, вводится вслепую, никуда не сохраняется;
+через bash, потому что в zsh у read другой синтаксис):
+  bash -c 'read -s -p \"Пароль: \" PW; echo; security unlock-keychain -p \"\$PW\" ~/Library/Keychains/login.keychain-db && security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k \"\$PW\" ~/Library/Keychains/login.keychain-db'
 
 То же самое мышкой: «Связка ключей» → Вход → Мои сертификаты →
 раскрыть Apple Development → двойной клик по ключу → Контроль доступа →
