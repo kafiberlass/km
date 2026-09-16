@@ -77,6 +77,21 @@ fi
 
 bold "  Xcode $(xcodebuild -version | head -1 | awk '{print $2}'), Node $(node -v), CocoaPods $(pod --version)"
 
+# Сертификат подписи. Expo сообщает о его отсутствии только после установки
+# зависимостей и prebuild — двадцать минут ради ошибки, которую видно сразу.
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Development"; then
+  fail "Xcode не знает ваш Apple ID, поэтому подписывать сборку нечем.
+Это единственный шаг, который нельзя сделать за вас — вход в аккаунт.
+
+1. Откройте Xcode → меню Xcode → Settings… (Cmd+,) → вкладка Accounts.
+2. Кнопка «+» слева внизу → Apple ID → войдите (тот же, что на телефоне).
+3. Выделите появившийся аккаунт → «Manage Certificates…» справа.
+4. «+» слева внизу → «Apple Development» → Done.
+
+Платная подписка для этого не нужна: личный аккаунт выпускает сертификат
+бесплатно. Дальше запустите скрипт заново."
+fi
+
 step "Ставлю зависимости (пара минут)"
 npm install
 
