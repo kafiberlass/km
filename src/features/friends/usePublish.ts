@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 
 import type { LngLat } from '@/core/geo/mercator';
 
-import { createFriendsProvider } from './index';
+import { createFriendsProvider } from './provider';
 import { shouldPublish, type PublishState } from './publish';
 
 /**

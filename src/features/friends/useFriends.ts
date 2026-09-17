@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import type { LngLat } from '@/core/geo/mercator';
 
-import { createFriendsProvider } from './index';
+import { createFriendsProvider } from './provider';
 import type { Friend } from './types';
 
 export function useFriends(origin: LngLat | null, enabled = true): Friend[] {
