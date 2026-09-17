@@ -16,6 +16,12 @@ import { insertCells, insertPoints } from '@/core/db/repo';
 import * as repo from '@/core/db/repo';
 import { CELL_RES, REVEAL_RADIUS_M, cellsAlongSegment, cellsAround } from '@/core/geo/coverage';
 import {
+  completedCount,
+  countByDistrict,
+  districtOf,
+  newlyCompleted,
+} from '@/core/geo/districts';
+import {
   DEFAULT_FILTER,
   filterStep,
   initialFilterState,
@@ -29,6 +35,7 @@ import {
   XP_RATES,
   applyXp,
   xpForDistance,
+  xpForDistricts,
   xpForNewCells,
   type LevelState,
 } from '@/core/rules/xp';
@@ -50,6 +57,10 @@ interface WalkState {
 
   distanceM: number;
   newCells: number;
+  /** Сколько учётных ячеек открыто в каждом квартале. */
+  districts: ReadonlyMap<string, number>;
+  /** Кварталов закрыто целиком. */
+  districtsDone: number;
   acceptedPoints: number;
   rejectedPoints: number;
 
@@ -86,6 +97,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
   startedAt: null,
   distanceM: 0,
   newCells: 0,
+  districts: new Map<string, number>(),
+  districtsDone: 0,
   acceptedPoints: 0,
   rejectedPoints: 0,
   liveSegment: [],
@@ -104,11 +117,17 @@ export const useWalkStore = create<WalkState>((set, get) => ({
         ? { lat: profile.originLat, lng: profile.originLng }
         : null;
 
+    // Прогресс кварталов собирается из всей истории один раз при старте,
+    // дальше поддерживается добавлением новых ячеек.
+    const districts = countByDistrict(repo.allCells());
+
     set({
       level: profile.level,
       xp: profile.xp,
       streakDays: profile.streakDays,
       exploredCells: repo.countCells(),
+      districts,
+      districtsDone: completedCount(districts),
     });
   },
 
@@ -199,7 +218,18 @@ export const useWalkStore = create<WalkState>((set, get) => ({
         ? cellsAlongSegment(previous, point, REVEAL_RADIUS_M, CELL_RES)
         : cellsAround(point, REVEAL_RADIUS_M, CELL_RES);
 
-    const added = insertCells(cells, sessionId, point.timestamp);
+    const addedCells = insertCells(cells, sessionId, point.timestamp);
+    const added = addedCells.length;
+
+    // Квартал засчитывается один раз — в момент перехода через порог,
+    // поэтому сравниваем состояние до и после, а не спрашиваем «закрыт ли».
+    const before = get().districts;
+    const after = new Map(before);
+    for (const cell of addedCells) {
+      const district = districtOf(cell);
+      after.set(district, (after.get(district) ?? 0) + 1);
+    }
+    const closed = newlyCompleted(before, after);
 
     set((s) => ({
       acceptedPoints: s.acceptedPoints + 1,
@@ -207,6 +237,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
         result.verdict.kind === 'accepted' ? s.distanceM + result.verdict.distanceM : s.distanceM,
       newCells: s.newCells + added,
       exploredCells: s.exploredCells + added,
+      districts: after,
+      districtsDone: s.districtsDone + closed.length,
       segmentIndex:
         result.verdict.kind === 'segment-start' && s.acceptedPoints > 0
           ? s.segmentIndex + 1
@@ -217,6 +249,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
           : [...s.liveSegment, { lat: point.lat, lng: point.lng }],
       geometryVersion: s.geometryVersion + 1,
     }));
+
+    if (closed.length > 0) awardDistricts(closed.length, sessionId, set, get);
 
     if (pendingPoints.length >= FLUSH_EVERY_POINTS) {
       flushPending(sessionId, get().segmentIndex);
@@ -306,6 +340,37 @@ function awardSessionXp(
     xp: next.xp,
     streakDays: streak.state.streakDays,
     toast: buildToast(newlyUnlocked, next.levelUps) ?? get().toast,
+  });
+}
+
+/**
+ * Награда за закрытый квартал.
+ *
+ * Начисляется сразу, а не в конце прогулки: человек только что дошёл
+ * последнюю улицу, и подтверждение должно прийти в этот момент, иначе
+ * связи между действием и наградой не возникает.
+ */
+function awardDistricts(
+  count: number,
+  sessionId: string | null,
+  set: (partial: Partial<WalkState>) => void,
+  get: () => WalkState,
+): void {
+  const amount = xpForDistricts(count);
+  repo.appendXpEvent('district-completed', amount, null, sessionId);
+
+  const profile = repo.getProfile();
+  const next = applyXp({ level: profile.level, xp: profile.xp } satisfies LevelState, amount);
+  repo.updateProfile({ level: next.level, xp: next.xp });
+
+  set({
+    level: next.level,
+    xp: next.xp,
+    toast: {
+      kind: 'level-up',
+      title: count === 1 ? 'Квартал закрыт!' : `Закрыто кварталов: ${count}`,
+      subtitle: `+${amount} XP · всего ${get().districtsDone}`,
+    },
   });
 }
 

@@ -144,14 +144,29 @@ export function insertPoints(sessionId: string, segment: number, points: GeoPoin
  * от него считается XP, поэтому повторный проход по своей же улице
  * не должен ничего начислять.
  */
-export function insertCells(cells: Cell[], sessionId: string | null, at: number): number {
-  if (cells.length === 0) return 0;
+/**
+ * Записать открытые ячейки. Возвращает те, которых раньше не было.
+ *
+ * Именно список, а не количество: по нему считается прогресс кварталов,
+ * а пересчитывать его по всей истории на каждую точку — непозволительно.
+ */
+export function insertCells(cells: Cell[], sessionId: string | null, at: number): Cell[] {
+  if (cells.length === 0) return [];
   const db = getRawDb();
-  const before = countCells();
+
+  const unique = [...new Set(cells)];
+  const placeholders = unique.map(() => '?').join(',');
+  const existing = db.executeSync(
+    `SELECT h3 FROM explored_cells WHERE h3 IN (${placeholders})`,
+    unique,
+  );
+  const known = new Set((existing.rows as { h3: string }[]).map((row) => row.h3));
+  const fresh = unique.filter((cell) => !known.has(cell));
+  if (fresh.length === 0) return [];
 
   db.executeSync('BEGIN');
   try {
-    for (const cell of cells) {
+    for (const cell of fresh) {
       db.executeSync(
         `INSERT OR IGNORE INTO explored_cells (h3, parent, first_seen_at, session_id)
          VALUES (?, ?, ?, ?)`,
@@ -164,7 +179,20 @@ export function insertCells(cells: Cell[], sessionId: string | null, at: number)
     throw error;
   }
 
-  return countCells() - before;
+  return fresh;
+}
+
+/**
+ * Все открытые ячейки — для подсчёта прогресса кварталов при запуске.
+ *
+ * Считается в JS, потому что SQLite не умеет брать родителя H3-ячейки.
+ * На скелете это тысячи строк и десятки миллисекунд; когда история
+ * дорастёт до сотен тысяч, в таблицу добавится колонка district
+ * и агрегат переедет в SQL.
+ */
+export function allCells(): Cell[] {
+  const res = getRawDb().executeSync('SELECT h3 FROM explored_cells');
+  return (res.rows as { h3: string }[]).map((row) => row.h3);
 }
 
 export function countCells(): number {

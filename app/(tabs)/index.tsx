@@ -15,6 +15,7 @@ import { Link } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
+import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelXpRequirement } from '@/core/rules/xp';
 import { palette, spacing } from '@/core/theme/tokens';
 import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
@@ -57,6 +58,7 @@ export default function MapScreen() {
   const xp = useWalkStore((s) => s.xp);
   const streakDays = useWalkStore((s) => s.streakDays);
   const exploredCells = useWalkStore((s) => s.exploredCells);
+  const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
   const liveSegment = useWalkStore((s) => s.liveSegment);
   const distanceM = useWalkStore((s) => s.distanceM);
@@ -94,6 +96,11 @@ export default function MapScreen() {
   // метку в примерном месте, чем не показать вовсе.
   const lastKnown = useLastKnownPosition();
   const myPoint = livePoint ?? lastKnown ?? origin;
+
+  // Прогресс квартала, в котором человек стоит прямо сейчас. Это и есть
+  // ответ на «сколько осталось» — в отличие от процента по всему району.
+  const hereId = districtAt(myPoint);
+  const here = progressOf(districts.get(hereId) ?? 0, hereId);
 
   const centerOnMe = useCallback(() => {
     // Если человек уже приблизился сильнее — не отдаляем: кнопка должна
@@ -185,10 +192,26 @@ export default function MapScreen() {
         )}
 
         <View style={styles.overlayTop} pointerEvents="box-none">
-          <Chip
-            label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
-            icon={<Feather name="map" size={16} color={palette.textDark} />}
-          />
+          <View style={styles.topLeft} pointerEvents="box-none">
+            <Chip
+              label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
+              icon={<Feather name="map" size={16} color={palette.textDark} />}
+            />
+            <Chip
+              label={
+                here.done
+                  ? 'КВАРТАЛ ЗАКРЫТ'
+                  : `КВАРТАЛ ${Math.round(here.ratio * 100)}%`
+              }
+              icon={
+                <Feather
+                  name={here.done ? 'check-circle' : 'grid'}
+                  size={16}
+                  color={here.done ? palette.teal : palette.textDark}
+                />
+              }
+            />
+          </View>
 
           <View style={styles.topRight} pointerEvents="box-none">
             <Pressable onPress={toggleAutoWalk}>
@@ -282,6 +305,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  topLeft: { gap: spacing.sm, alignItems: 'flex-start' },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   chipOff: { backgroundColor: palette.sand },
   devLink: {

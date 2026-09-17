@@ -18,6 +18,7 @@ export function levelXpRequirement(level: number): number {
 export type XpKind =
   | 'distance'
   | 'new-cells'
+  | 'district-completed'
   | 'place-discovered'
   | 'achievement'
   | 'streak-bonus'
@@ -38,6 +39,14 @@ export const XP_RATES = {
   perNewCell: 1,
   /** За впервые найденное место. */
   perPlace: 50,
+  /**
+   * За закрытый квартал.
+   *
+   * Заметно больше, чем набегает ячейками за ту же прогулку: награда
+   * должна чувствоваться за доведение до конца, а не за сам факт ходьбы,
+   * иначе кварталы не станут целью.
+   */
+  perDistrict: 150,
   /** Разовый бонус за первую прогулку в календарный день. */
   firstWalkOfDay: 25,
   /** Бонус за каждый день стрика, с потолком. */
@@ -51,6 +60,10 @@ export function xpForDistance(distanceM: number): number {
 
 export function xpForNewCells(cellCount: number): number {
   return cellCount * XP_RATES.perNewCell;
+}
+
+export function xpForDistricts(count: number): number {
+  return count * XP_RATES.perDistrict;
 }
 
 export function xpForStreak(streakDays: number): number {

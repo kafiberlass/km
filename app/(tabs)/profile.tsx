@@ -6,12 +6,10 @@ import { Link } from 'expo-router';
 
 import { resetDatabase } from '@/core/db/client';
 import { buildSnapshot, countCells, getProfile, unlockedAchievements } from '@/core/db/repo';
-import { formatPercent } from '@/core/geo/coverage';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelXpRequirement } from '@/core/rules/xp';
 import { palette, radii, spacing } from '@/core/theme/tokens';
-import { useCoverage } from '@/features/fog/useFog';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -27,6 +25,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const exploredCells = useWalkStore((s) => s.exploredCells);
   const level = useWalkStore((s) => s.level);
+  const districtsDone = useWalkStore((s) => s.districtsDone);
   const xp = useWalkStore((s) => s.xp);
   const hydrate = useWalkStore((s) => s.hydrate);
 
@@ -38,12 +37,6 @@ export default function ProfileScreen() {
     }),
     [exploredCells],
   );
-
-  const origin =
-    profile.originLat != null && profile.originLng != null
-      ? { lat: profile.originLat, lng: profile.originLng }
-      : null;
-  const coverage = useCoverage(origin, exploredCells);
 
   const timeZone = profile.timeZone === 'UTC' ? deviceTimeZone() : profile.timeZone;
   const streak = currentStreak(
@@ -81,7 +74,7 @@ export default function ProfileScreen() {
             label="км пройдено"
             color={palette.emberDeep}
           />
-          <Tile value={formatPercent(coverage.ratio)} label="открыто" color={palette.teal} />
+          <Tile value={String(districtsDone)} label="кварталов" color={palette.teal} />
           <Tile value={String(streak)} label="дней подряд" color={palette.emberDeep} />
         </View>
 
