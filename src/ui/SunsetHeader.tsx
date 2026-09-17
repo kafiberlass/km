@@ -16,9 +16,23 @@ interface Props {
   xp: number;
   xpRequired: number;
   streakDays: number;
+  /**
+   * Высота статус-бара. Отступ уходит внутрь шапки, а не наружу: полосы
+   * заката залиты по всей её высоте, поэтому только так они доходят
+   * до верхнего края экрана. Отступ снаружи оставлял бы над закатом
+   * полосу фона, а сам закат выглядел бы обрезанным.
+   */
+  topInset?: number;
 }
 
-export function SunsetHeader({ level, title, xp, xpRequired, streakDays }: Props) {
+export function SunsetHeader({
+  level,
+  title,
+  xp,
+  xpRequired,
+  streakDays,
+  topInset = 0,
+}: Props) {
   return (
     <View style={styles.root}>
       <View style={styles.bands}>
@@ -30,7 +44,7 @@ export function SunsetHeader({ level, title, xp, xpRequired, streakDays }: Props
         <View style={styles.horizon} />
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingTop: topInset + spacing.sm }]}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>КМ</Text>
         </View>

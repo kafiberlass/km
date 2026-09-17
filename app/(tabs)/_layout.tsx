@@ -2,15 +2,27 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, radii, spacing } from '@/core/theme/tokens';
 
+/** Высота панели без учёта жеста «домой». */
+const BAR_HEIGHT = 64;
+
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.bar,
+        // Явная высота отменяет ту, что навигация считает с учётом
+        // безопасной зоны, поэтому полосу под жест «домой» добавляем сами —
+        // иначе подписи вкладок уезжают под нижний край экрана и обрезаются.
+        tabBarStyle: [
+          styles.bar,
+          { height: BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
+        ],
         tabBarItemStyle: styles.item,
         tabBarActiveTintColor: palette.textOnDark,
         tabBarInactiveTintColor: palette.textDark,
@@ -55,7 +67,6 @@ const styles = StyleSheet.create({
   bar: {
     backgroundColor: palette.fogSoft,
     borderTopWidth: 0,
-    height: 78,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.sm,
     gap: spacing.sm,
@@ -65,7 +76,8 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: palette.ink,
     marginHorizontal: 4,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.xs,
   },
-  label: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  label: { fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 0 },
 });

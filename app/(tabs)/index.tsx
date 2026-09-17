@@ -66,15 +66,14 @@ export default function MapScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: insets.top }}>
-        <SunsetHeader
-          level={level}
-          title="Ночной бродяга"
-          xp={xp}
-          xpRequired={levelXpRequirement(level)}
-          streakDays={streakDays}
-        />
-      </View>
+      <SunsetHeader
+        level={level}
+        title="Ночной бродяга"
+        xp={xp}
+        xpRequired={levelXpRequirement(level)}
+        streakDays={streakDays}
+        topInset={insets.top}
+      />
 
       <View style={styles.barWrap}>
         <XpBar ratio={xp / levelXpRequirement(level)} />
