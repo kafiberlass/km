@@ -19,7 +19,7 @@ import { levelXpRequirement } from '@/core/rules/xp';
 import { palette, spacing } from '@/core/theme/tokens';
 import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
-import { useFriends } from '@/features/friends';
+import { useFriends, usePublishPosition } from '@/features/friends';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import { MapCanvas } from '@/features/map/MapCanvas';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -63,6 +63,12 @@ export default function MapScreen() {
   const friends = useFriends(origin, showFriends);
 
   const tracking = status === 'tracking' || status === 'starting';
+
+  // Делимся позицией только на прогулке: круглосуточная трансляция —
+  // другая фича и другой разговор про приватность.
+  const livePoint = liveSegment.length > 0 ? liveSegment[liveSegment.length - 1]! : null;
+  usePublishPosition(origin, livePoint, tracking);
+
   const toggle = useCallback(() => {
     if (tracking) void stop();
     else void start();

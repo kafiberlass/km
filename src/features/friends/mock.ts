@@ -101,6 +101,22 @@ export class MockFriendsProvider implements FriendsProvider {
 
   constructor(private readonly origin: LngLat) {}
 
+  /** В демо код показываем, чтобы экран выглядел как настоящий. */
+  inviteCode(): Promise<string | null> {
+    return Promise.resolve('ДЕМО42');
+  }
+
+  linkByCode(): Promise<void> {
+    return Promise.reject(
+      new Error('Сервер не настроен: друзья демонстрационные, связать по коду нельзя'),
+    );
+  }
+
+  /** Отправлять позицию некуда, но и падать незачем. */
+  publishPosition(): Promise<void> {
+    return Promise.resolve();
+  }
+
   subscribe(listener: (friends: Friend[]) => void): () => void {
     listener(buildFriends(this.origin, Date.now()));
 

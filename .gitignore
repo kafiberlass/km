@@ -7,3 +7,6 @@ ios/
 .DS_Store
 expo-env.d.ts
 .export-check/
+
+# Ключи проекта: в репозиторий не кладём, есть .env.example
+.env

@@ -5,8 +5,8 @@
  * не расходятся: и там, и там одна подписка через useFriends.
  */
 
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -14,7 +14,13 @@ import { router } from 'expo-router';
 import { getProfile } from '@/core/db/repo';
 import { haversineMeters } from '@/core/geo/mercator';
 import { DEMO_CENTER } from '@/features/places/seed';
-import { isFresh, useFriends, type Friend } from '@/features/friends';
+import {
+  createFriendsProvider,
+  isFresh,
+  isServerConfigured,
+  useFriends,
+  type Friend,
+} from '@/features/friends';
 import { palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -55,6 +61,37 @@ export default function FriendsScreen() {
   const friends = useFriends(origin);
   const online = friends.filter((f) => f.position != null && isFresh(f.position)).length;
 
+  const [myCode, setMyCode] = useState<string | null>(null);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    const provider = createFriendsProvider(origin);
+    if (!provider.inviteCode) return;
+    void provider.inviteCode().then(setMyCode);
+  }, [origin.lat, origin.lng]);
+
+  const link = useCallback(async () => {
+    const code = input.trim();
+    if (code.length === 0 || busy) return;
+
+    const provider = createFriendsProvider(origin);
+    if (!provider.linkByCode) return;
+
+    setBusy(true);
+    setMessage(null);
+    try {
+      await provider.linkByCode(code);
+      setInput('');
+      setMessage({ text: 'Готово, вы друзья', ok: true });
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : String(error), ok: false });
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, input, origin.lat, origin.lng]);
+
   return (
     <View style={styles.root}>
       <ScreenHeader
@@ -64,20 +101,62 @@ export default function FriendsScreen() {
         onClose={() => router.back()}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>ТВОЙ КОД</Text>
+          <Text style={styles.code}>{myCode ?? '······'}</Text>
+          <Text style={styles.hint}>
+            Продиктуйте его другу — он введёт код у себя, и вы увидите друг друга на карте.
+          </Text>
+
+          <View style={styles.linkRow}>
+            <TextInput
+              value={input}
+              onChangeText={(value) => setInput(value.toUpperCase())}
+              placeholder="КОД ДРУГА"
+              placeholderTextColor={palette.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={8}
+              style={styles.input}
+              onSubmitEditing={() => void link()}
+              returnKeyType="done"
+            />
+            <ActionButton
+              label={busy ? '…' : 'СВЯЗАТЬ'}
+              onPress={() => void link()}
+              disabled={busy || input.trim().length === 0}
+            />
+          </View>
+
+          {message != null && (
+            <Text style={message.ok ? styles.ok : styles.error}>{message.text}</Text>
+          )}
+        </View>
+
         {friends.map((friend) => (
           <FriendCard key={friend.id} friend={friend} origin={origin} />
         ))}
 
-        <View style={styles.note}>
-          <Text style={styles.noteTitle}>Данные демонстрационные</Text>
-          <Text style={styles.noteBody}>
-            Позиции друзей приходят от встроенного демо-провайдера: сервера у
-            приложения нет, а «где человек сейчас» без обмена между устройствами
-            не бывает. Экран написан так, как будто данные настоящие — когда
-            появится бэкенд, меняется источник, а не этот список.
-          </Text>
-        </View>
+        {isServerConfigured() ? (
+          <View style={styles.note}>
+            <Text style={styles.noteTitle}>Позиция уходит только на прогулке</Text>
+            <Text style={styles.noteBody}>
+              Пока прогулка не запущена, друзья видят вашу последнюю точку и время,
+              когда она обновлялась. Круглосуточной трансляции нет — это отдельная
+              фича и отдельный разговор про приватность.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.note}>
+            <Text style={styles.noteTitle}>Данные демонстрационные</Text>
+            <Text style={styles.noteBody}>
+              Сервер не настроен, друзья ненастоящие: их рисует встроенный
+              демо-провайдер. Чтобы увидеть живого человека, задайте адрес проекта
+              и публичный ключ — инструкция в README, схема в docs/supabase.sql.
+            </Text>
+          </View>
+        )}
 
         <ActionButton label="ЗАКРЫТЬ" tone="ghost" onPress={() => router.back()} />
       </ScrollView>
@@ -179,6 +258,31 @@ const styles = StyleSheet.create({
   },
   visitTitle: { flex: 1, color: palette.textDark, fontWeight: '800', fontSize: 13 },
   visitTime: { color: palette.textMuted, fontSize: 11 },
+
+  cardTitle: { color: palette.textDark, fontWeight: '900', letterSpacing: 1 },
+  code: {
+    color: palette.emberDeep,
+    fontSize: 34,
+    fontWeight: '900',
+    letterSpacing: 6,
+    fontVariant: ['tabular-nums'],
+  },
+  hint: { color: palette.textMuted, fontSize: 12, lineHeight: 17 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  input: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.parchment,
+    color: palette.textDark,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  ok: { color: palette.teal, fontWeight: '800' },
+  error: { color: palette.rust, fontWeight: '800' },
 
   note: {
     padding: spacing.md,

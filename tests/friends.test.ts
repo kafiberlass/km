@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { haversineMeters } from '@/core/geo/mercator';
-import { MockFriendsProvider, isFresh, POSITION_FRESH_MS } from '@/features/friends';
-import type { Friend } from '@/features/friends';
+// Импорт по файлам, а не через index: тот тянет серверный провайдер,
+// а с ним — react-native, который vitest не разбирает. Тесты остаются
+// чистой логикой и бегут без эмулятора, как и весь core.
+import { MockFriendsProvider } from '@/features/friends/mock';
+import { isFresh, POSITION_FRESH_MS, type Friend } from '@/features/friends/types';
 
 const KAZAN = { lat: 55.7963, lng: 49.1088 };
 
