@@ -22,6 +22,8 @@ import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { useFriends, usePublishPosition } from '@/features/friends';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import { MapCanvas } from '@/features/map/MapCanvas';
+import { SelfMarker } from '@/features/map/SelfMarker';
+import { useLastKnownPosition } from '@/features/tracking/useLastKnown';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { ActionButton, Chip, Toast, XpBar } from '@/ui/widgets';
 import { SunsetHeader } from '@/ui/SunsetHeader';
@@ -69,6 +71,12 @@ export default function MapScreen() {
   const livePoint = liveSegment.length > 0 ? liveSegment[liveSegment.length - 1]! : null;
   usePublishPosition(origin, livePoint, tracking);
 
+  // Где я сам. На прогулке — свежая точка трека, до неё — последняя
+  // известная системе, а если и её нет, то точка отсчёта: лучше показать
+  // метку в примерном месте, чем не показать вовсе.
+  const lastKnown = useLastKnownPosition();
+  const myPoint = livePoint ?? lastKnown ?? origin;
+
   const toggle = useCallback(() => {
     if (tracking) void stop();
     else void start();
@@ -103,6 +111,17 @@ export default function MapScreen() {
             camera={camera}
             width={size.width}
             height={size.height}
+          />
+        )}
+
+        {size.width > 0 && (
+          <SelfMarker
+            point={myPoint}
+            origin={origin}
+            camera={camera}
+            width={size.width}
+            height={size.height}
+            active={tracking}
           />
         )}
 
