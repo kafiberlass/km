@@ -33,6 +33,15 @@ import { ActionButton, Chip, Toast, XpBar } from '@/ui/widgets';
 import { SunsetHeader } from '@/ui/SunsetHeader';
 import { useWalkStore } from '@/store/useWalkStore';
 
+/**
+ * Масштаб, на который кнопка «к себе» приближает карту.
+ *
+ * 17 — это примерно квартал на экран: видно дома и переулки, по которым
+ * идёшь. Дальше (18+) уже теряется контекст, ближе (15–16) — не понять,
+ * какой двор твой.
+ */
+const CLOSE_ZOOM = 17;
+
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -87,8 +96,11 @@ export default function MapScreen() {
   const myPoint = livePoint ?? lastKnown ?? origin;
 
   const centerOnMe = useCallback(() => {
-    cameraRef.current?.flyTo({ center: [myPoint.lng, myPoint.lat], duration: 600 });
-  }, [myPoint.lat, myPoint.lng]);
+    // Если человек уже приблизился сильнее — не отдаляем: кнопка должна
+    // возвращать к себе, а не сбрасывать масштаб, который он выбрал сам.
+    const zoom = Math.max(camera.value.zoom, CLOSE_ZOOM);
+    cameraRef.current?.flyTo({ center: [myPoint.lng, myPoint.lat], zoom, duration: 700 });
+  }, [camera, myPoint.lat, myPoint.lng]);
 
   const toggleAutoWalk = useCallback(() => {
     setAutoWalk((value) => {
