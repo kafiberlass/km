@@ -1,7 +1,10 @@
 /**
- * Стиль карты под макет: тёмно-коричневая земля, бирюзовая сетка улиц,
- * без подписей. Подписи выключены сознательно — в макете их нет, и они
- * ломали бы ощущение «неизведанной территории».
+ * Стиль карты под макет: тёмно-коричневая земля, бирюзовая сетка улиц.
+ *
+ * Подписей в макете нет, но без них на почти чёрной карте невозможно
+ * понять, где ты находишься. Компромисс: названия населённых пунктов
+ * и районов — да, всё остальное (улицы, дома, магазины) — нет. Ощущение
+ * «неизведанной территории» держится на тумане, а не на безымянности.
  *
  * Источник тайлов — OpenFreeMap (схема OpenMapTiles), бесплатно и без ключа.
  * Когда понадобится независимость — планета собирается planetiler'ом
@@ -22,6 +25,8 @@ export function buildMapStyle(): StyleSpecification {
   return {
     version: 8,
     name: 'km-retro',
+    // Шрифты для подписей раздаёт тот же OpenFreeMap, ключ не нужен.
+    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
     sources: {
       omt: {
         type: 'vector',
@@ -90,6 +95,39 @@ export function buildMapStyle(): StyleSpecification {
           'line-color': palette.tealBright,
           'line-opacity': 0.7,
           'line-width': ['interpolate', ['exponential', 1.4], ['zoom'], 10, 0.6, 18, 6],
+        },
+      },
+      {
+        // Города видно издалека, районы — на прогулочном масштабе, так что
+        // подпись на экране есть всегда, на каком бы зуме ни стояла карта.
+        id: 'place-labels',
+        type: 'symbol',
+        source: 'omt',
+        'source-layer': 'place',
+        filter: ['in', 'class', 'city', 'town', 'village', 'suburb', 'neighbourhood'],
+        layout: {
+          // name:ru есть не везде, поэтому откатываемся на основное имя.
+          'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
+          'text-font': ['Noto Sans Bold'],
+          'text-transform': 'uppercase',
+          'text-letter-spacing': 0.15,
+          'text-max-width': 8,
+          'text-size': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            8,
+            ['match', ['get', 'class'], 'city', 14, 11],
+            16,
+            ['match', ['get', 'class'], 'city', 20, 15],
+          ],
+        },
+        paint: {
+          'text-color': palette.parchment,
+          'text-opacity': 0.75,
+          // Обводка цветом земли: подпись читается поверх любых улиц и воды.
+          'text-halo-color': palette.ink,
+          'text-halo-width': 1.6,
         },
       },
     ],
