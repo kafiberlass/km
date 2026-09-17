@@ -3,66 +3,112 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { allPlaces } from '@/core/db/repo';
+import { allPlaces, getProfile } from '@/core/db/repo';
+import { haversineMeters } from '@/core/geo/mercator';
 import { palette, radii, spacing } from '@/core/theme/tokens';
+import { ScreenHeader } from '@/ui/ScreenHeader';
 import { useWalkStore } from '@/store/useWalkStore';
 
-const ICONS: Record<string, keyof typeof Feather.glyphMap> = {
-  cafe: 'coffee',
-  park: 'sun',
-  viewpoint: 'eye',
+/** Цвет плитки закреплён за типом места — как в макете. */
+const KINDS: Record<
+  string,
+  { icon: keyof typeof Feather.glyphMap; color: string; label: string }
+> = {
+  cafe: { icon: 'coffee', color: palette.ember, label: 'Кафе' },
+  park: { icon: 'sun', color: palette.teal, label: 'Парк' },
+  viewpoint: { icon: 'eye', color: palette.rust, label: 'Достопримечательность' },
 };
+
+const FALLBACK_KIND = { icon: 'map-pin', color: palette.mulberry, label: 'Место' } as const;
+
+/** Метры до места: близкие — в метрах, дальние — в километрах. */
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters / 10) * 10} м`;
+  return `${(meters / 1000).toFixed(1)} км`;
+}
 
 export default function PlacesScreen() {
   const insets = useSafeAreaInsets();
   const exploredCells = useWalkStore((s) => s.exploredCells);
   const places = useMemo(() => allPlaces(), [exploredCells]);
 
+  // Расстояние считаем от домашней точки: живой геолокации на этом экране
+  // нет, а гонять её ради списка — лишний расход батареи.
+  const profile = getProfile();
+  const origin =
+    profile.originLat != null && profile.originLng != null
+      ? { lat: profile.originLat, lng: profile.originLng }
+      : null;
+
   const found = places.filter((p) => p.discoveredAt != null).length;
+  const hidden = places.length - found;
 
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}
-    >
-      <Text style={styles.heading}>МЕСТА</Text>
-      <Text style={styles.counter}>
-        Найдено {found} из {places.length}
-      </Text>
+    <View style={styles.root}>
+      <ScreenHeader
+        title="Места рядом"
+        subtitle={`${found} найдено · ${hidden} скрыто туманом`}
+        topInset={insets.top}
+      />
 
-      {places.map((place) => {
-        const discovered = place.discoveredAt != null;
-        return (
-          <View key={place.id} style={styles.card}>
-            <View style={[styles.icon, !discovered && styles.iconLocked]}>
-              <Feather
-                name={discovered ? (ICONS[place.type] ?? 'map-pin') : 'help-circle'}
-                size={20}
-                color={palette.textDark}
-              />
+      <ScrollView contentContainerStyle={styles.content}>
+        {places.map((place) => {
+          const discovered = place.discoveredAt != null;
+          const kind = KINDS[place.type] ?? FALLBACK_KIND;
+          const distance =
+            origin != null
+              ? formatDistance(haversineMeters(origin, { lat: place.lat, lng: place.lng }))
+              : null;
+
+          if (!discovered) {
+            /*
+              Неоткрытые места намеренно скрывают название: смысл механики
+              в том, чтобы дойти и узнать, а не прочитать список заранее.
+              В макете у них пунктирная рамка — «здесь что-то есть».
+            */
+            return (
+              <View key={place.id} style={[styles.card, styles.cardHidden]}>
+                <View style={[styles.badge, styles.badgeHidden]}>
+                  <Feather name="lock" size={20} color={palette.textMuted} />
+                </View>
+                <View style={styles.body}>
+                  <Text style={styles.titleHidden}>??? Скрыто туманом</Text>
+                  <Text style={styles.subtitle}>
+                    ПРОЙДИ РЯДОМ, ЧТОБЫ ОТКРЫТЬ · +{place.xpReward} XP
+                  </Text>
+                </View>
+              </View>
+            );
+          }
+
+          return (
+            <View key={place.id} style={styles.card}>
+              <View style={[styles.badge, { backgroundColor: kind.color }]}>
+                <Feather name={kind.icon} size={20} color={palette.parchmentBright} />
+              </View>
+              <View style={styles.body}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {place.title.toUpperCase()}
+                </Text>
+                <Text style={styles.subtitle}>
+                  {[kind.label, distance, place.subtitle]
+                    .filter((part) => part != null && part !== '')
+                    .join(' · ')
+                    .toUpperCase()}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={22} color={palette.textDark} />
             </View>
-            <View style={styles.body}>
-              {/*
-                Неоткрытые места намеренно скрывают название: смысл механики
-                в том, чтобы дойти и узнать, а не прочитать список заранее.
-              */}
-              <Text style={styles.title}>{discovered ? place.title : '???'}</Text>
-              <Text style={styles.subtitle}>
-                {discovered ? (place.subtitle ?? 'Найдено') : `Где-то рядом · +${place.xpReward} XP`}
-              </Text>
-            </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.dune },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  heading: { color: palette.textOnDark, fontSize: 24, fontWeight: '900', letterSpacing: 2 },
-  counter: { color: palette.parchment, marginBottom: spacing.sm },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -71,20 +117,30 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 3,
     borderColor: palette.ink,
-    backgroundColor: palette.parchment,
+    backgroundColor: palette.parchmentBright,
   },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.sm,
+  cardHidden: {
+    backgroundColor: palette.sand,
+    borderStyle: 'dashed',
+    borderColor: palette.textMuted,
+  },
+  badge: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.md,
     borderWidth: 3,
     borderColor: palette.ink,
-    backgroundColor: palette.parchmentBright,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconLocked: { backgroundColor: palette.sand },
-  body: { flex: 1 },
-  title: { color: palette.textDark, fontWeight: '900', fontSize: 16 },
-  subtitle: { color: palette.textMuted, marginTop: 2 },
+  badgeHidden: { backgroundColor: '#B6A883', borderColor: palette.textMuted },
+  body: { flex: 1, gap: 2 },
+  title: { color: palette.textDark, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  titleHidden: { color: palette.textMuted, fontWeight: '900', fontSize: 16 },
+  subtitle: {
+    color: palette.textMuted,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    fontVariant: ['tabular-nums'],
+  },
 });
