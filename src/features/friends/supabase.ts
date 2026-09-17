@@ -12,7 +12,7 @@
  */
 
 import 'react-native-url-polyfill/auto';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 
 import type { LngLat } from '@/core/geo/mercator';
 import { palette } from '@/core/theme/tokens';
@@ -63,6 +63,15 @@ export class SupabaseFriendsProvider implements FriendsProvider {
   readonly id = 'server' as const;
 
   private readonly client: SupabaseClient;
+
+  /**
+   * Слушателей несколько — карта и экран друзей, — а канал realtime один.
+   * Supabase не даёт добавить обработчики в уже запущенный канал, да и
+   * два канала на одни и те же строки означали бы двойные запросы.
+   */
+  private readonly listeners = new Set<(friends: Friend[]) => void>();
+  private channel: RealtimeChannel | null = null;
+  private latest: Friend[] = [];
 
   constructor(url: string, anonKey: string) {
     this.client = createClient(url, anonKey, {
@@ -143,32 +152,56 @@ export class SupabaseFriendsProvider implements FriendsProvider {
   }
 
   subscribe(listener: (friends: Friend[]) => void): () => void {
-    let cancelled = false;
+    this.listeners.add(listener);
 
-    const refresh = () => {
-      void this.loadFriends().then((friends) => {
-        if (!cancelled) listener(friends);
-      });
-    };
-
-    void this.ensureSession().then(() => {
-      if (cancelled) return;
-      refresh();
-    });
-
-    // Одна подписка на обе таблицы: перезапрашиваем целиком, а не собираем
-    // состояние из событий. На десятке друзей это дешевле ошибки в склейке.
-    const channel = this.client
-      .channel('friends')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'positions' }, refresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'place_visits' }, refresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, refresh)
-      .subscribe();
+    // Новый слушатель получает уже известное немедленно: иначе экран
+    // висит пустым, пока не придёт следующее обновление.
+    if (this.latest.length > 0) listener(this.latest);
+    if (!this.channel) this.open();
 
     return () => {
-      cancelled = true;
-      void this.client.removeChannel(channel);
+      this.listeners.delete(listener);
+      if (this.listeners.size === 0) this.close();
     };
+  }
+
+  private emit(friends: Friend[]): void {
+    this.latest = friends;
+    for (const listener of this.listeners) listener(friends);
+  }
+
+  private refresh(): void {
+    void this.loadFriends().then((friends) => {
+      if (this.channel) this.emit(friends);
+    });
+  }
+
+  private open(): void {
+    void this.ensureSession().then(() => {
+      if (this.channel) this.refresh();
+    });
+
+    // Перезапрашиваем список целиком, а не собираем состояние из событий:
+    // на десятке друзей это дешевле ошибки в склейке.
+    this.channel = this.client
+      .channel('friends')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'positions' }, () =>
+        this.refresh(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'place_visits' }, () =>
+        this.refresh(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, () =>
+        this.refresh(),
+      )
+      .subscribe();
+  }
+
+  private close(): void {
+    const channel = this.channel;
+    this.channel = null;
+    this.latest = [];
+    if (channel) void this.client.removeChannel(channel);
   }
 
   /** Своя позиция. Частоту вызовов решает вызывающий — см. publish.ts. */
