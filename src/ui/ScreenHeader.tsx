@@ -11,7 +11,8 @@
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import { palette, spacing, sunsetBands } from '@/core/theme/tokens';
 
@@ -21,9 +22,14 @@ interface Props {
   topInset: number;
   /** Кружок «КМ» по центру — вариант для профиля. */
   avatar?: React.ReactNode;
+  /**
+   * Крестик в углу для экранов, открытых поверх вкладок. Свайп вниз их
+   * тоже закрывает, но об этом надо знать заранее — кнопка видна сразу.
+   */
+  onClose?: () => void;
 }
 
-export function ScreenHeader({ title, subtitle, topInset, avatar }: Props) {
+export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Props) {
   const centered = avatar != null;
 
   return (
@@ -34,6 +40,22 @@ export function ScreenHeader({ title, subtitle, topInset, avatar }: Props) {
         ))}
         {centered && <View style={styles.sun} />}
       </View>
+
+      {onClose != null && (
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [
+            styles.close,
+            { top: topInset + spacing.sm },
+            pressed && styles.closePressed,
+          ]}
+          hitSlop={spacing.md}
+          accessibilityRole="button"
+          accessibilityLabel="Закрыть"
+        >
+          <Feather name="x" size={20} color={palette.textDark} />
+        </Pressable>
+      )}
 
       <View style={[styles.content, centered && styles.contentCentered]}>
         {avatar}
@@ -78,6 +100,20 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   contentCentered: { alignItems: 'center', gap: spacing.xs },
+  close: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 1,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.parchmentBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closePressed: { transform: [{ translateY: 2 }] },
   centeredText: { textAlign: 'center' },
   title: {
     color: palette.parchmentBright,

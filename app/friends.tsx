@@ -9,6 +9,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
 import { haversineMeters } from '@/core/geo/mercator';
@@ -16,6 +17,7 @@ import { DEMO_CENTER } from '@/features/places/seed';
 import { isFresh, useFriends, type Friend } from '@/features/friends';
 import { palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
+import { ActionButton } from '@/ui/widgets';
 
 const VISIT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   cafe: 'coffee',
@@ -59,6 +61,7 @@ export default function FriendsScreen() {
         title="Друзья"
         subtitle={`${friends.length} всего · ${online} на прогулке`}
         topInset={insets.top}
+        onClose={() => router.back()}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -75,6 +78,8 @@ export default function FriendsScreen() {
             появится бэкенд, меняется источник, а не этот список.
           </Text>
         </View>
+
+        <ActionButton label="ЗАКРЫТЬ" tone="ghost" onPress={() => router.back()} />
       </ScrollView>
     </View>
   );
