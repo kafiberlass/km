@@ -1,3 +1,10 @@
+-- Скрипт применяется целиком, одной вставкой в SQL Editor.
+--
+-- Разделители тела функций именованные, вида $link$: редактор Supabase
+-- разбивает вставленное на выражения сам и на безымянных разделителях
+-- иногда теряет закрывающий, сообщая «unterminated dollar-quoted
+-- string». С именованными перепутать нечего.
+--
 -- Схема для «друзей на карте».
 --
 -- Как применить: Supabase → проект → SQL Editor → вставить целиком → Run.
@@ -56,7 +63,7 @@ create index if not exists place_visits_user_idx on public.place_visits (user_id
 -- Алфавит без похожих знаков: ноль и «O», единица и «I» неразличимы
 -- на слух и в спешке, а код диктуют вслух.
 create or replace function public.new_invite_code() returns text
-language plpgsql as $$
+language plpgsql as $code_gen$
 declare
   alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   candidate text;
@@ -70,19 +77,19 @@ begin
   end loop;
   return candidate;
 end;
-$$;
+$code_gen$;
 
 -- Профиль заводится сам при регистрации: отдельного шага «создай профиль»
 -- в приложении нет, а без профиля не будет кода для связи.
 create or replace function public.handle_new_user() returns trigger
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $new_user$
 begin
   insert into public.profiles (id, invite_code)
   values (new.id, public.new_invite_code())
   on conflict (id) do nothing;
   return new;
 end;
-$$;
+$new_user$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -92,7 +99,7 @@ create trigger on_auth_user_created
 -- Связывание по коду. SECURITY DEFINER, потому что вставлять строку
 -- дружбы за другого пользователя политики запрещают — и правильно делают.
 create or replace function public.link_by_code(code text) returns uuid
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $link$
 declare
   target uuid;
 begin
@@ -101,7 +108,7 @@ begin
   end if;
 
   select id into target from public.profiles
-  where invite_code = upper(regexp_replace(code, '\s', '', 'g'));
+  where invite_code = upper(regexp_replace(code, '[[:space:]]', '', 'g'));
 
   if target is null then
     raise exception 'unknown_code';
@@ -116,7 +123,7 @@ begin
 
   return target;
 end;
-$$;
+$link$;
 
 grant execute on function public.link_by_code(text) to authenticated;
 
@@ -129,12 +136,12 @@ alter table public.place_visits enable row level security;
 
 -- Вспомогательная проверка: друг ли мне этот пользователь.
 create or replace function public.is_friend(other uuid) returns boolean
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public as $is_friend$
   select exists (
     select 1 from public.friendships
     where user_id = auth.uid() and friend_id = other
   );
-$$;
+$is_friend$;
 
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select
@@ -186,7 +193,7 @@ create policy visits_delete on public.place_visits for delete
 -- не будет присылать, и позиции друзей обновятся только при перезаходе.
 -- Повторное добавление таблицы в публикацию — ошибка, поэтому проверяем:
 -- скрипт должен оставаться идемпотентным.
-do $$
+do $realtime$
 begin
   if not exists (
     select 1 from pg_publication_tables
@@ -202,4 +209,4 @@ begin
     alter publication supabase_realtime add table public.place_visits;
   end if;
 end;
-$$;
+$realtime$;
