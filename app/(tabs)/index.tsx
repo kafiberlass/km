@@ -6,7 +6,7 @@
  * Карта и туман синхронизируются через SharedValue камеры, без setState.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
@@ -21,8 +21,12 @@ import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { useFriends, usePublishPosition } from '@/features/friends';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
+import type { CameraRef } from '@maplibre/maplibre-react-native';
+
+import { getFlag, setFlag } from '@/core/db/kv';
 import { MapCanvas } from '@/features/map/MapCanvas';
 import { SelfMarker } from '@/features/map/SelfMarker';
+import { useAutoWalk } from '@/features/tracking/useAutoWalk';
 import { useLastKnownPosition } from '@/features/tracking/useLastKnown';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { ActionButton, Chip, Toast, XpBar } from '@/ui/widgets';
@@ -33,6 +37,11 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [showFriends, setShowFriends] = useState(true);
+  const cameraRef = useRef<CameraRef>(null);
+
+  // Настройка живёт в базе: человек включил автоопределение один раз,
+  // а не заново после каждого перезапуска.
+  const [autoWalk, setAutoWalk] = useState(() => getFlag('auto-walk', false));
 
   const status = useWalkStore((s) => s.status);
   const level = useWalkStore((s) => s.level);
@@ -77,10 +86,35 @@ export default function MapScreen() {
   const lastKnown = useLastKnownPosition();
   const myPoint = livePoint ?? lastKnown ?? origin;
 
+  const centerOnMe = useCallback(() => {
+    cameraRef.current?.flyTo({ center: [myPoint.lng, myPoint.lat], duration: 600 });
+  }, [myPoint.lat, myPoint.lng]);
+
+  const toggleAutoWalk = useCallback(() => {
+    setAutoWalk((value) => {
+      const next = !value;
+      setFlag('auto-walk', next);
+      return next;
+    });
+  }, []);
+
   const toggle = useCallback(() => {
     if (tracking) void stop();
     else void start();
   }, [start, stop, tracking]);
+
+  // Автоопределение зовёт те же start и stop, что и кнопка: ручной
+  // и автоматический путь не должны расходиться в поведении.
+  useAutoWalk(
+    autoWalk,
+    tracking,
+    useCallback(() => {
+      void start();
+    }, [start]),
+    useCallback(() => {
+      void stop();
+    }, [stop]),
+  );
 
   return (
     <View style={styles.root}>
@@ -99,6 +133,7 @@ export default function MapScreen() {
 
       <View style={styles.mapWrap}>
         <MapCanvas
+          ref={cameraRef}
           camera={camera}
           initialCenter={[origin.lng, origin.lat]}
           onLayoutSize={setSize}
@@ -144,6 +179,20 @@ export default function MapScreen() {
           />
 
           <View style={styles.topRight} pointerEvents="box-none">
+            <Pressable onPress={toggleAutoWalk}>
+              <Chip
+                label={autoWalk ? 'АВТО ВКЛ' : 'АВТО ВЫКЛ'}
+                icon={
+                  <Feather
+                    name="activity"
+                    size={16}
+                    color={autoWalk ? palette.textDark : palette.textMuted}
+                  />
+                }
+                style={autoWalk ? undefined : styles.chipOff}
+              />
+            </Pressable>
+
             <Pressable onPress={() => setShowFriends((value) => !value)}>
               <Chip
                 label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}
@@ -163,6 +212,15 @@ export default function MapScreen() {
             </Link>
           </View>
         </View>
+
+        <Pressable
+          onPress={centerOnMe}
+          style={({ pressed }) => [styles.locate, pressed && styles.locatePressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Вернуться к своей точке"
+        >
+          <Feather name="navigation" size={20} color={palette.textDark} />
+        </Pressable>
 
         <View style={styles.overlayBottom} pointerEvents="box-none">
           {toast && (
@@ -220,6 +278,22 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     padding: spacing.sm,
   },
+  // Над нижней панелью, у правого края: большой палец дотягивается,
+  // а кнопку прогулки не перекрывает.
+  locate: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: 96,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.parchmentBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locatePressed: { transform: [{ translateY: 2 }] },
   overlayBottom: {
     position: 'absolute',
     left: spacing.md,
