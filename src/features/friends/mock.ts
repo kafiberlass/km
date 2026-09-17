@@ -117,6 +117,10 @@ export class MockFriendsProvider implements FriendsProvider {
     return Promise.resolve();
   }
 
+  removeFriend(): Promise<void> {
+    return Promise.reject(new Error('Демо-друзья не удаляются: сервер не настроен'));
+  }
+
   subscribe(listener: (friends: Friend[]) => void): () => void {
     listener(buildFriends(this.origin, Date.now()));
 

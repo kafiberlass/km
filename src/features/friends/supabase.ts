@@ -249,6 +249,36 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     throw new Error(error.message);
   }
 
+  /**
+   * Разорвать дружбу.
+   *
+   * Удаляются обе строки: связь хранится по одной на направление, и если
+   * снести только свою, друг продолжит видеть вашу позицию. Политика это
+   * разрешает — в каждой строке одна из сторон вы.
+   */
+  async removeFriend(friendId: string): Promise<void> {
+    const userId = await this.ensureSession();
+    if (!userId) throw new Error('Нет связи с сервером');
+
+    const mine = await this.client
+      .from('friendships')
+      .delete()
+      .eq('user_id', userId)
+      .eq('friend_id', friendId);
+    const theirs = await this.client
+      .from('friendships')
+      .delete()
+      .eq('user_id', friendId)
+      .eq('friend_id', userId);
+
+    const error = mine.error ?? theirs.error;
+    if (error) throw new Error(error.message);
+
+    // Не ждём события realtime: оно придёт, но список должен обновиться
+    // сразу, иначе кнопка выглядит сломанной.
+    this.refresh();
+  }
+
   /** Имя, которое увидят друзья. */
   async setDisplayName(name: string): Promise<void> {
     const userId = await this.ensureSession();

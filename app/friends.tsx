@@ -6,7 +6,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -99,6 +99,41 @@ export default function FriendsScreen() {
     }
   }, [busy, input, origin.lat, origin.lng]);
 
+  // Подтверждение обязательно: отменить удаление нечем, связь придётся
+  // заводить заново по коду, а код друга ещё надо будет спросить.
+  const remove = useCallback(
+    (friend: Friend) => {
+      const provider = createFriendsProvider(origin);
+      if (!provider.removeFriend) return;
+
+      Alert.alert(
+        `Удалить ${friend.name}?`,
+        'Вы перестанете видеть друг друга на карте. Чтобы вернуть, понадобится снова связаться по коду.',
+        [
+          { text: 'Отмена', style: 'cancel' },
+          {
+            text: 'Удалить',
+            style: 'destructive',
+            onPress: () => {
+              void provider
+                .removeFriend?.(friend.id)
+                // Формулировка без рода: имя друга приходит с сервера,
+                // и «удалён» или «удалена» — не угадать.
+                .then(() => setMessage({ text: `${friend.name} — больше не в друзьях`, ok: true }))
+                .catch((error: unknown) => {
+                  setMessage({
+                    text: error instanceof Error ? error.message : String(error),
+                    ok: false,
+                  });
+                });
+            },
+          },
+        ],
+      );
+    },
+    [origin.lat, origin.lng],
+  );
+
   return (
     <View style={styles.root}>
       <ScreenHeader
@@ -151,7 +186,12 @@ export default function FriendsScreen() {
         </View>
 
         {friends.map((friend) => (
-          <FriendCard key={friend.id} friend={friend} origin={origin} />
+          <FriendCard
+            key={friend.id}
+            friend={friend}
+            origin={origin}
+            onRemove={() => remove(friend)}
+          />
         ))}
 
         {isServerConfigured() ? (
@@ -180,7 +220,15 @@ export default function FriendsScreen() {
   );
 }
 
-function FriendCard({ friend, origin }: { friend: Friend; origin: { lat: number; lng: number } }) {
+function FriendCard({
+  friend,
+  origin,
+  onRemove,
+}: {
+  friend: Friend;
+  origin: { lat: number; lng: number };
+  onRemove: () => void;
+}) {
   const position = friend.position;
   const fresh = position != null && isFresh(position);
 
@@ -205,6 +253,16 @@ function FriendCard({ friend, origin }: { friend: Friend; origin: { lat: number;
         {/* Точка «на прогулке» — единственный признак, который виден
             мгновенно, без чтения строки статуса. */}
         <View style={[styles.dot, fresh ? styles.dotLive : styles.dotStale]} />
+
+        <Pressable
+          onPress={onRemove}
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [styles.remove, pressed && styles.removePressed]}
+          accessibilityRole="button"
+          accessibilityLabel={`Удалить ${friend.name}`}
+        >
+          <Feather name="trash-2" size={16} color={palette.textMuted} />
+        </Pressable>
       </View>
 
       {friend.visits.length > 0 && (
@@ -260,6 +318,17 @@ const styles = StyleSheet.create({
   dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: palette.ink },
   dotLive: { backgroundColor: palette.ember },
   dotStale: { backgroundColor: palette.sand },
+
+  remove: {
+    width: 34,
+    height: 34,
+    borderRadius: radii.sm,
+    borderWidth: 2,
+    borderColor: palette.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removePressed: { transform: [{ translateY: 2 }] },
 
   visits: { gap: spacing.sm, borderTopWidth: 2, borderTopColor: '#00000018', paddingTop: spacing.sm },
   visit: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

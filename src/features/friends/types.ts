@@ -61,6 +61,8 @@ export interface FriendsProvider {
   inviteCode?(): Promise<string | null>;
   /** Связаться с другом по его коду. Бросает понятную ошибку. */
   linkByCode?(code: string): Promise<void>;
+  /** Разорвать дружбу. Обе стороны перестают видеть друг друга. */
+  removeFriend?(friendId: string): Promise<void>;
 }
 
 /** Считается ли позиция актуальной. Старую метку показываем приглушённой. */
