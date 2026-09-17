@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cameraMatrixWorklet,
+  projectToScreenWorklet,
   createProjector,
   groundMetersToMercatorMeters,
   haversineMeters,
@@ -227,5 +228,56 @@ describe('sun', () => {
 
   it('полярная ночь в Мурманске в декабре — темно и в полдень', () => {
     expect(isAfterSunset(Date.UTC(2026, 11, 21, 9, 0, 0), 68.97, 33.08)).toBe(true);
+  });
+});
+
+describe('projectToScreenWorklet', () => {
+  const width = 390;
+  const height = 700;
+  const origin = lngLatToMercator(MOSCOW);
+  const matrix = cameraMatrixWorklet(
+    MOSCOW.lng,
+    MOSCOW.lat,
+    15,
+    0,
+    width,
+    height,
+    origin.x,
+    origin.y,
+  );
+
+  it('ставит центр камеры в центр экрана', () => {
+    const p = projectToScreenWorklet(MOSCOW.lng, MOSCOW.lat, matrix, origin.x, origin.y);
+    expect(p.x).toBeCloseTo(width / 2, 6);
+    expect(p.y).toBeCloseTo(height / 2, 6);
+  });
+
+  it('точка восточнее уходит вправо, севернее — вверх', () => {
+    const east = projectToScreenWorklet(MOSCOW.lng + 0.01, MOSCOW.lat, matrix, origin.x, origin.y);
+    const north = projectToScreenWorklet(MOSCOW.lng, MOSCOW.lat + 0.01, matrix, origin.x, origin.y);
+
+    expect(east.x).toBeGreaterThan(width / 2);
+    expect(east.y).toBeCloseTo(height / 2, 6);
+    expect(north.y).toBeLessThan(height / 2);
+    expect(north.x).toBeCloseTo(width / 2, 6);
+  });
+
+  it('согласован с матрицей тумана при повороте камеры', () => {
+    const rotated = cameraMatrixWorklet(
+      MOSCOW.lng,
+      MOSCOW.lat,
+      15,
+      90,
+      width,
+      height,
+      origin.x,
+      origin.y,
+    );
+    const p = projectToScreenWorklet(MOSCOW.lng + 0.01, MOSCOW.lat, rotated, origin.x, origin.y);
+
+    // При повороте на 90° восток перестаёт быть «вправо»: он уезжает вверх,
+    // ровно так же, как повернётся коридор тумана с той же матрицей.
+    expect(p.x).toBeCloseTo(width / 2, 6);
+    expect(p.y).toBeLessThan(height / 2);
   });
 });

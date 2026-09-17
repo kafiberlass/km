@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +19,8 @@ import { levelXpRequirement } from '@/core/rules/xp';
 import { palette, spacing } from '@/core/theme/tokens';
 import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
+import { useFriends } from '@/features/friends';
+import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import { MapCanvas } from '@/features/map/MapCanvas';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { ActionButton, Chip, Toast, XpBar } from '@/ui/widgets';
@@ -28,6 +30,7 @@ import { useWalkStore } from '@/store/useWalkStore';
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [showFriends, setShowFriends] = useState(true);
 
   const status = useWalkStore((s) => s.status);
   const level = useWalkStore((s) => s.level);
@@ -57,6 +60,7 @@ export default function MapScreen() {
 
   const { geometry, stats } = useFogGeometry(origin, geometryVersion, liveSegment);
   const coverage = useCoverage(origin, exploredCells);
+  const friends = useFriends(origin, showFriends);
 
   const tracking = status === 'tracking' || status === 'starting';
   const toggle = useCallback(() => {
@@ -96,14 +100,43 @@ export default function MapScreen() {
           />
         )}
 
+        {/* Друзья рисуются НАД туманом: иначе метка исчезает ровно там,
+            где ты ещё не гулял, — то есть почти везде. */}
+        {size.width > 0 && showFriends && (
+          <FriendsLayer
+            friends={friends}
+            origin={origin}
+            camera={camera}
+            width={size.width}
+            height={size.height}
+          />
+        )}
+
         <View style={styles.overlayTop} pointerEvents="box-none">
           <Chip
             label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
             icon={<Feather name="map" size={16} color={palette.textDark} />}
           />
-          <Link href="/dev" asChild>
-            <Text style={styles.devLink}>DEV</Text>
-          </Link>
+
+          <View style={styles.topRight} pointerEvents="box-none">
+            <Pressable onPress={() => setShowFriends((value) => !value)}>
+              <Chip
+                label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}
+                icon={
+                  <Feather
+                    name="users"
+                    size={16}
+                    color={showFriends ? palette.textDark : palette.textMuted}
+                  />
+                }
+                style={showFriends ? undefined : styles.chipOff}
+              />
+            </Pressable>
+
+            <Link href="/dev" asChild>
+              <Text style={styles.devLink}>DEV</Text>
+            </Link>
+          </View>
         </View>
 
         <View style={styles.overlayBottom} pointerEvents="box-none">
@@ -154,6 +187,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  chipOff: { backgroundColor: palette.sand },
   devLink: {
     color: palette.parchment,
     fontWeight: '900',

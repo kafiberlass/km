@@ -187,6 +187,33 @@ export function cameraMatrixWorklet(
   ];
 }
 
+/**
+ * Координата -> точка на экране, тем же преобразованием, что и туман.
+ *
+ * Нужна для меток поверх карты (друзья, их места): они живут в React, а не
+ * в Skia, и должны ехать за картой кадр в кадр. Поэтому — воркет: матрица
+ * уже посчитана на UI-потоке, остаётся умножить на неё точку.
+ */
+export function projectToScreenWorklet(
+  lng: number,
+  lat: number,
+  matrix: number[],
+  originMercX: number,
+  originMercY: number,
+): { x: number; y: number } {
+  'worklet';
+  const R = 6378137;
+  const clamped = lat > 85.051129 ? 85.051129 : lat < -85.051129 ? -85.051129 : lat;
+
+  const px = ((lng * Math.PI) / 180) * R - originMercX;
+  const py = Math.log(Math.tan(Math.PI / 4 + (clamped * Math.PI) / 360)) * R - originMercY;
+
+  return {
+    x: (matrix[0] ?? 0) * px + (matrix[1] ?? 0) * py + (matrix[2] ?? 0),
+    y: (matrix[3] ?? 0) * px + (matrix[4] ?? 0) * py + (matrix[5] ?? 0),
+  };
+}
+
 /** Обратное преобразование — нужно, чтобы отсечь невидимые сегменты трека. */
 export function visibleLocalBounds(
   camera: CameraState,
