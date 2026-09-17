@@ -1,10 +1,15 @@
 /**
- * Стиль карты под макет: тёмно-коричневая земля, бирюзовая сетка улиц.
+ * Стиль карты под макет: светлая песчаная земля, бирюзовая сетка улиц.
  *
- * Подписей в макете нет, но без них на почти чёрной карте невозможно
- * понять, где ты находишься. Компромисс: названия населённых пунктов
- * и районов — да, всё остальное (улицы, дома, магазины) — нет. Ощущение
- * «неизведанной территории» держится на тумане, а не на безымянности.
+ * Земля светлая намеренно. Тёмная в макете — это туман, а не карта:
+ * открытый коридор показывает песчаную землю с бирюзовыми улицами,
+ * закрытое пространство закрашивает слой тумана поверх. Если сделать
+ * тёмной саму карту, открытая зона получится такой же тёмной, как
+ * закрытая, и смысл механики пропадает.
+ *
+ * Подписей в макете нет, но без них непонятно, где ты находишься.
+ * Компромисс: названия населённых пунктов и районов — да, всё остальное
+ * (улицы, дома, магазины) — нет.
  *
  * Источник тайлов — OpenFreeMap (схема OpenMapTiles), бесплатно и без ключа.
  * Когда понадобится независимость — планета собирается planetiler'ом
@@ -38,7 +43,7 @@ export function buildMapStyle(): StyleSpecification {
       {
         id: 'background',
         type: 'background',
-        paint: { 'background-color': palette.fogSoft },
+        paint: { 'background-color': palette.ground },
       },
       {
         id: 'landcover',
@@ -46,21 +51,21 @@ export function buildMapStyle(): StyleSpecification {
         source: 'omt',
         'source-layer': 'landcover',
         filter: ['in', 'class', 'wood', 'grass', 'farmland'],
-        paint: { 'fill-color': '#33372A', 'fill-opacity': 0.55 },
+        paint: { 'fill-color': '#C2C295', 'fill-opacity': 0.5 },
       },
       {
         id: 'park',
         type: 'fill',
         source: 'omt',
         'source-layer': 'park',
-        paint: { 'fill-color': '#2F4034', 'fill-opacity': 0.6 },
+        paint: { 'fill-color': '#B3C79E', 'fill-opacity': 0.65 },
       },
       {
         id: 'water',
         type: 'fill',
         source: 'omt',
         'source-layer': 'water',
-        paint: { 'fill-color': '#1D3A3A' },
+        paint: { 'fill-color': '#8FBEB6' },
       },
       {
         id: 'building',
@@ -68,7 +73,7 @@ export function buildMapStyle(): StyleSpecification {
         source: 'omt',
         'source-layer': 'building',
         minzoom: 14,
-        paint: { 'fill-color': palette.ink, 'fill-opacity': 0.45 },
+        paint: { 'fill-color': '#CBAE85', 'fill-opacity': 0.9 },
       },
       {
         id: 'road-minor',
@@ -79,8 +84,8 @@ export function buildMapStyle(): StyleSpecification {
         minzoom: 13,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': palette.teal,
-          'line-opacity': 0.45,
+          'line-color': palette.tealBright,
+          'line-opacity': 0.55,
           'line-width': ['interpolate', ['exponential', 1.4], ['zoom'], 13, 0.4, 18, 3],
         },
       },
@@ -92,8 +97,8 @@ export function buildMapStyle(): StyleSpecification {
         filter: ['in', 'class', 'motorway', 'trunk', 'primary', 'secondary', 'tertiary'],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': palette.tealBright,
-          'line-opacity': 0.7,
+          'line-color': palette.teal,
+          'line-opacity': 0.85,
           'line-width': ['interpolate', ['exponential', 1.4], ['zoom'], 10, 0.6, 18, 6],
         },
       },
@@ -123,10 +128,10 @@ export function buildMapStyle(): StyleSpecification {
           ],
         },
         paint: {
-          'text-color': palette.parchment,
-          'text-opacity': 0.75,
+          'text-color': palette.textDark,
+          'text-opacity': 0.8,
           // Обводка цветом земли: подпись читается поверх любых улиц и воды.
-          'text-halo-color': palette.ink,
+          'text-halo-color': palette.ground,
           'text-halo-width': 1.6,
         },
       },

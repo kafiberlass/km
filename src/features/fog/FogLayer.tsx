@@ -5,8 +5,13 @@
  *  1. Геометрия строится ОДИН раз в локальных метрах Меркатора.
  *  2. Камера карты живёт в SharedValue, матрица считается в воркете
  *     на UI-потоке — React не ре-рендерится при панорамировании.
- *  3. Туман — сплошная заливка, из которой вычитается (blendMode dstOut)
- *     обводка пути. Размытие даёт мягкий край, как в макете.
+ *  3. Туман — сплошная заливка под маской яркости: белое в маске держит
+ *     туман, чёрное протирает дырку. Дырка — обводка пути, размытая
+ *     фильтром, отсюда мягкий край, как в макете.
+ *
+ * Маска, а не blendMode dstOut с offscreen-слоем: dstOut требует, чтобы
+ * группа поднимала свой слой, и на устройстве этот слой не композился —
+ * канвас оставался пустым, туман не появлялся вовсе.
  *
  * Питч не поддерживается: перспектива сломала бы постоянную толщину тропы.
  * Карта в приложении плоская, так что ограничение бесплатное.
@@ -18,6 +23,7 @@ import {
   Blur,
   Canvas,
   Group,
+  Mask,
   Path,
   Rect,
 } from '@shopify/react-native-skia';
@@ -75,26 +81,31 @@ export function FogLayer({
 
   return (
     <Canvas style={styles.canvas}>
-      {/*
-        layer={true} поднимает offscreen-слой: без него dstOut вычитал бы
-        из всего содержимого канваса, а не только из заливки тумана.
-      */}
-      <Group layer>
-        <Rect x={0} y={0} width={width} height={height} color={palette.fog} />
+      <Mask
+        mode="luminance"
+        mask={
+          <Group>
+            {/* Белое — туман на месте. */}
+            <Rect x={0} y={0} width={width} height={height} color="white" />
 
-        <Group blendMode="dstOut" matrix={matrix}>
-          {/* Размытие в экранных пикселях — край тумана одинаково мягкий на любом зуме. */}
-          <Blur blur={theme.fog.edgeBlurPx} />
-          <Path
-            path={geometry.reveal}
-            style="stroke"
-            strokeWidth={geometry.revealStrokeMerc}
-            strokeCap="round"
-            strokeJoin="round"
-            color="black"
-          />
-        </Group>
-      </Group>
+            {/* Чёрное — протёртый коридор. Размытие в экранных пикселях,
+                поэтому край одинаково мягкий на любом зуме. */}
+            <Group matrix={matrix}>
+              <Blur blur={theme.fog.edgeBlurPx} />
+              <Path
+                path={geometry.reveal}
+                style="stroke"
+                strokeWidth={geometry.revealStrokeMerc}
+                strokeCap="round"
+                strokeJoin="round"
+                color="black"
+              />
+            </Group>
+          </Group>
+        }
+      >
+        <Rect x={0} y={0} width={width} height={height} color={palette.fogVeil} />
+      </Mask>
 
       {showTrail && (
         <Group matrix={matrix}>
@@ -102,7 +113,7 @@ export function FogLayer({
             path={geometry.trail}
             style="stroke"
             /* Ширина в метрах Меркатора: тропа всегда занимает ту же долю коридора. */
-            strokeWidth={geometry.revealStrokeMerc * 0.28}
+            strokeWidth={geometry.revealStrokeMerc * 0.45}
             strokeCap="round"
             strokeJoin="round"
             color={palette.ember}
