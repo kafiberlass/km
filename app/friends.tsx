@@ -66,10 +66,17 @@ export default function FriendsScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
+  // null после загрузки — это не «ещё грузится», а «не получилось».
+  // Разделяем два состояния, иначе экран молча показывает точки.
+  const [codeLoaded, setCodeLoaded] = useState(false);
+
   useEffect(() => {
     const provider = createFriendsProvider(origin);
     if (!provider.inviteCode) return;
-    void provider.inviteCode().then(setMyCode);
+    void provider.inviteCode().then((code) => {
+      setMyCode(code);
+      setCodeLoaded(true);
+    });
   }, [origin.lat, origin.lng]);
 
   const link = useCallback(async () => {
@@ -105,9 +112,18 @@ export default function FriendsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>ТВОЙ КОД</Text>
           <Text style={styles.code}>{myCode ?? '······'}</Text>
-          <Text style={styles.hint}>
-            Продиктуйте его другу — он введёт код у себя, и вы увидите друг друга на карте.
-          </Text>
+
+          {myCode != null || !codeLoaded ? (
+            <Text style={styles.hint}>
+              Продиктуйте его другу — он введёт код у себя, и вы увидите друг друга на карте.
+            </Text>
+          ) : (
+            <Text style={styles.error}>
+              Код не пришёл. Чаще всего это значит, что в Supabase выключен анонимный вход:
+              Authentication → Providers → Anonymous sign-ins. Причина целиком — в логе Metro,
+              строка «[friends]».
+            </Text>
+          )}
 
           <View style={styles.linkRow}>
             <TextInput
