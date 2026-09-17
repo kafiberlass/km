@@ -16,6 +16,10 @@ const BAR_HEIGHT = 72;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  // Половина безопасной зоны: на полной под кнопками остаётся заметная
+  // пустая полоса, на нуле системная чёрточка жеста «домой» легла бы прямо
+  // на подписи. Половина — кнопки почти у края, подписи читаются.
+  const bottomInset = Math.round(insets.bottom / 2);
 
   return (
     <Tabs
@@ -26,7 +30,7 @@ export default function TabsLayout() {
         // иначе подписи вкладок уезжают под нижний край экрана и обрезаются.
         tabBarStyle: [
           styles.bar,
-          { height: BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
+          { height: BAR_HEIGHT + bottomInset, paddingBottom: bottomInset },
         ],
         tabBarItemStyle: styles.item,
         tabBarActiveTintColor: palette.textOnDark,
