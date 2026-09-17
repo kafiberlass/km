@@ -6,8 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, radii, spacing } from '@/core/theme/tokens';
 
-/** Высота панели без учёта жеста «домой». */
-const BAR_HEIGHT = 64;
+/**
+ * Высота панели без учёта жеста «домой».
+ *
+ * С запасом: иконка 20, подпись 10 и рамка кнопки в 3 пункта суммарно
+ * требуют около 50, остальное — воздух. Занижать нельзя, обрезается подпись.
+ */
+const BAR_HEIGHT = 72;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -76,7 +81,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: palette.ink,
     marginHorizontal: 4,
-    marginBottom: spacing.xs,
     paddingVertical: spacing.xs,
   },
   label: { fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 0 },
