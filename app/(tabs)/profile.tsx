@@ -87,7 +87,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: palette.fogSoft },
+  root: { flex: 1, backgroundColor: palette.dune },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   heading: { color: palette.textOnDark, fontSize: 24, fontWeight: '900', letterSpacing: 2 },
   row: { flexDirection: 'row', gap: spacing.md },

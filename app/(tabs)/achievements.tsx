@@ -54,7 +54,7 @@ export default function AchievementsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: palette.fogSoft },
+  root: { flex: 1, backgroundColor: palette.dune },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   heading: {
     color: palette.textOnDark,
