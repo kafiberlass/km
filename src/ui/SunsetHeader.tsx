@@ -34,7 +34,7 @@ export function SunsetHeader({
   topInset = 0,
 }: Props) {
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { minHeight: topInset + MIN_BODY_HEIGHT }]}>
       <View style={styles.bands}>
         {sunsetBands.map((color) => (
           <View key={color} style={[styles.band, { backgroundColor: color }]} />
@@ -68,6 +68,17 @@ export function SunsetHeader({
 }
 
 const BAND_HEIGHT = 22;
+const SUN_SIZE = 110;
+const SUN_BOTTOM = 26;
+
+/**
+ * Высота шапки без статус-бара.
+ *
+ * Считается от солнца, а не от текста: круг — самый высокий элемент, и если
+ * шапка ниже, чем он поднимается над своим краем, верхушка солнца просто
+ * срезается границей. Текст в эту высоту укладывается с запасом.
+ */
+const MIN_BODY_HEIGHT = SUN_SIZE + SUN_BOTTOM + spacing.sm;
 
 const styles = StyleSheet.create({
   root: {
@@ -81,10 +92,10 @@ const styles = StyleSheet.create({
   sun: {
     position: 'absolute',
     alignSelf: 'center',
-    bottom: 18,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    bottom: SUN_BOTTOM,
+    width: SUN_SIZE,
+    height: SUN_SIZE,
+    borderRadius: SUN_SIZE / 2,
     backgroundColor: '#F7E27E',
   },
   horizon: {
@@ -97,6 +108,9 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '4deg' }],
   },
   content: {
+    // Растягиваем на всю шапку, чтобы текст встал по центру оставшейся
+    // высоты, а не прижался к верху под самым солнцем.
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
