@@ -52,6 +52,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: styles.root }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="dev" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="friends" options={{ presentation: 'modal' }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

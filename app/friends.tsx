@@ -1,0 +1,188 @@
+/**
+ * Экран друзей.
+ *
+ * Тот же провайдер, что и метки на карте, поэтому список и карта никогда
+ * не расходятся: и там, и там одна подписка через useFriends.
+ */
+
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+
+import { getProfile } from '@/core/db/repo';
+import { haversineMeters } from '@/core/geo/mercator';
+import { DEMO_CENTER } from '@/features/places/seed';
+import { isFresh, useFriends, type Friend } from '@/features/friends';
+import { palette, radii, spacing } from '@/core/theme/tokens';
+import { ScreenHeader } from '@/ui/ScreenHeader';
+
+const VISIT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
+  cafe: 'coffee',
+  park: 'sun',
+  viewpoint: 'eye',
+};
+
+/** «12 минут назад» вместо даты: на таких сроках относительное время понятнее. */
+function timeAgo(timestamp: number, now: number = Date.now()): string {
+  const minutes = Math.max(0, Math.round((now - timestamp) / 60_000));
+  if (minutes < 1) return 'только что';
+  if (minutes < 60) return `${minutes} мин назад`;
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ч назад`;
+
+  const days = Math.round(hours / 24);
+  return days === 1 ? 'вчера' : `${days} дн назад`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters / 10) * 10} м`;
+  return `${(meters / 1000).toFixed(1)} км`;
+}
+
+export default function FriendsScreen() {
+  const insets = useSafeAreaInsets();
+
+  const profile = getProfile();
+  const origin =
+    profile.originLat != null && profile.originLng != null
+      ? { lat: profile.originLat, lng: profile.originLng }
+      : { lat: DEMO_CENTER[1], lng: DEMO_CENTER[0] };
+
+  const friends = useFriends(origin);
+  const online = friends.filter((f) => f.position != null && isFresh(f.position)).length;
+
+  return (
+    <View style={styles.root}>
+      <ScreenHeader
+        title="Друзья"
+        subtitle={`${friends.length} всего · ${online} на прогулке`}
+        topInset={insets.top}
+      />
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {friends.map((friend) => (
+          <FriendCard key={friend.id} friend={friend} origin={origin} />
+        ))}
+
+        <View style={styles.note}>
+          <Text style={styles.noteTitle}>Данные демонстрационные</Text>
+          <Text style={styles.noteBody}>
+            Позиции друзей приходят от встроенного демо-провайдера: сервера у
+            приложения нет, а «где человек сейчас» без обмена между устройствами
+            не бывает. Экран написан так, как будто данные настоящие — когда
+            появится бэкенд, меняется источник, а не этот список.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function FriendCard({ friend, origin }: { friend: Friend; origin: { lat: number; lng: number } }) {
+  const position = friend.position;
+  const fresh = position != null && isFresh(position);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.head}>
+        <View style={[styles.avatar, { backgroundColor: friend.color }, !fresh && styles.dim]}>
+          <Text style={styles.avatarText}>{friend.initials}</Text>
+        </View>
+
+        <View style={styles.headBody}>
+          <Text style={styles.name}>{friend.name.toUpperCase()}</Text>
+          <Text style={styles.status}>
+            {position == null
+              ? 'НЕ ДЕЛИТСЯ ПОЗИЦИЕЙ'
+              : `${formatDistance(haversineMeters(origin, position))} ОТ ТЕБЯ · ${timeAgo(
+                  position.updatedAt,
+                ).toUpperCase()}`}
+          </Text>
+        </View>
+
+        {/* Точка «на прогулке» — единственный признак, который виден
+            мгновенно, без чтения строки статуса. */}
+        <View style={[styles.dot, fresh ? styles.dotLive : styles.dotStale]} />
+      </View>
+
+      {friend.visits.length > 0 && (
+        <View style={styles.visits}>
+          {friend.visits.map((visit) => (
+            <View key={visit.id} style={styles.visit}>
+              <View style={[styles.visitIcon, { borderColor: friend.color }]}>
+                <Feather
+                  name={VISIT_ICONS[visit.type] ?? 'map-pin'}
+                  size={14}
+                  color={palette.textDark}
+                />
+              </View>
+              <Text style={styles.visitTitle} numberOfLines={1}>
+                {visit.title}
+              </Text>
+              <Text style={styles.visitTime}>{timeAgo(visit.visitedAt)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: palette.dune },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+
+  card: {
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.parchmentBright,
+    gap: spacing.md,
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headBody: { flex: 1, gap: 2 },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dim: { opacity: 0.55 },
+  avatarText: { color: palette.parchmentBright, fontWeight: '900', fontSize: 15 },
+  name: { color: palette.textDark, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  status: { color: palette.textMuted, fontSize: 11, letterSpacing: 0.8 },
+  dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: palette.ink },
+  dotLive: { backgroundColor: palette.ember },
+  dotStale: { backgroundColor: palette.sand },
+
+  visits: { gap: spacing.sm, borderTopWidth: 2, borderTopColor: '#00000018', paddingTop: spacing.sm },
+  visit: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  visitIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: radii.sm,
+    borderWidth: 3,
+    backgroundColor: palette.parchment,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  visitTitle: { flex: 1, color: palette.textDark, fontWeight: '800', fontSize: 13 },
+  visitTime: { color: palette.textMuted, fontSize: 11 },
+
+  note: {
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.fog,
+    gap: 6,
+  },
+  noteTitle: { color: palette.gold, fontWeight: '900' },
+  noteBody: { color: palette.parchment, lineHeight: 20 },
+});

@@ -116,6 +116,14 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <Link href="/friends" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="users" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>ДРУЗЬЯ</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
+
         <Link href="/dev" asChild>
           <Pressable style={({ pressed }) => [styles.settings, pressed && styles.settingsPressed]}>
             <Feather name="settings" size={18} color={palette.parchmentBright} />
@@ -216,6 +224,18 @@ const styles = StyleSheet.create({
   },
   badgeMoreText: { color: palette.textMuted, fontWeight: '900' },
 
+  friends: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.parchmentBright,
+  },
+  friendsText: { color: palette.textDark, fontWeight: '900', letterSpacing: 1 },
   settings: {
     flexDirection: 'row',
     alignItems: 'center',
