@@ -68,8 +68,10 @@ export function SunsetHeader({
 }
 
 const BAND_HEIGHT = 22;
-const SUN_SIZE = 110;
-const SUN_BOTTOM = 26;
+// Солнце небольшое намеренно: оно задаёт высоту всей шапки, а каждый
+// лишний пункт здесь — пункт, отнятый у карты.
+const SUN_SIZE = 76;
+const SUN_BOTTOM = 10;
 
 /**
  * Высота шапки без статус-бара.
@@ -78,7 +80,7 @@ const SUN_BOTTOM = 26;
  * шапка ниже, чем он поднимается над своим краем, верхушка солнца просто
  * срезается границей. Текст в эту высоту укладывается с запасом.
  */
-const MIN_BODY_HEIGHT = SUN_SIZE + SUN_BOTTOM + spacing.sm;
+const MIN_BODY_HEIGHT = SUN_SIZE + SUN_BOTTOM + spacing.xs;
 
 const styles = StyleSheet.create({
   root: {
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -40,
     right: -40,
-    bottom: -60,
+    bottom: -76,
     height: 120,
     backgroundColor: palette.ink,
     transform: [{ rotate: '4deg' }],
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.md,
   },
   badge: {
     width: 52,
