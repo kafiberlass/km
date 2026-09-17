@@ -68,19 +68,17 @@ export function SunsetHeader({
 }
 
 const BAND_HEIGHT = 22;
-// Солнце небольшое намеренно: оно задаёт высоту всей шапки, а каждый
-// лишний пункт здесь — пункт, отнятый у карты.
-const SUN_SIZE = 76;
+const SUN_SIZE = 78;
 const SUN_BOTTOM = 10;
 
 /**
  * Высота шапки без статус-бара.
  *
- * Считается от солнца, а не от текста: круг — самый высокий элемент, и если
- * шапка ниже, чем он поднимается над своим краем, верхушка солнца просто
- * срезается границей. Текст в эту высоту укладывается с запасом.
+ * Складывается из строки с уровнем (её высоту задаёт кружок «КМ» в 52
+ * пункта плюс отступы) и места под солнце. Меньше нельзя: солнце начнёт
+ * налезать на текст, а в макете оно встаёт строго под ним.
  */
-const MIN_BODY_HEIGHT = SUN_SIZE + SUN_BOTTOM + spacing.xs;
+const MIN_BODY_HEIGHT = 150;
 
 const styles = StyleSheet.create({
   root: {
@@ -100,25 +98,26 @@ const styles = StyleSheet.create({
     borderRadius: SUN_SIZE / 2,
     backgroundColor: '#F7E27E',
   },
+  // Холм, из-за которого встаёт солнце: видна только верхняя полоса,
+  // остальное уходит под нижний край шапки.
   horizon: {
     position: 'absolute',
     left: -40,
     right: -40,
-    bottom: -76,
-    height: 120,
+    bottom: -72,
+    height: 100,
     backgroundColor: palette.ink,
     transform: [{ rotate: '4deg' }],
   },
   content: {
-    // Растягиваем на всю шапку, чтобы текст встал по центру оставшейся
-    // высоты, а не прижался к верху под самым солнцем.
-    flex: 1,
+    // Без flex: в макете строка с уровнем прижата к верху, а под ней
+    // остаётся место, из которого встаёт солнце.
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
   },
   badge: {
     width: 52,

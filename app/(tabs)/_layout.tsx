@@ -30,7 +30,7 @@ export default function TabsLayout() {
         // иначе подписи вкладок уезжают под нижний край экрана и обрезаются.
         tabBarStyle: [
           styles.bar,
-          { height: BAR_HEIGHT + bottomInset, paddingBottom: spacing.xs },
+          { height: BAR_HEIGHT + bottomInset, paddingBottom: spacing.sm },
         ],
         tabBarItemStyle: styles.item,
         tabBarActiveTintColor: palette.textOnDark,
@@ -74,11 +74,11 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   bar: {
-    backgroundColor: palette.fogSoft,
+    // В макете панель — тёплый коричневый, заметно светлее карты, и кнопки
+    // на нём лежат с одинаковым полем сверху и снизу.
+    backgroundColor: palette.bark,
     borderTopWidth: 0,
-    // Отступы минимальные: кнопки должны закрывать панель целиком,
-    // иначе её фон выглядывает из-под них тёмной полосой.
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
     paddingHorizontal: spacing.sm,
     gap: spacing.sm,
   },

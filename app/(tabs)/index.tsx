@@ -132,7 +132,9 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: palette.fogSoft },
+  // Тело экрана в макете светлое: пергаментная панель, на которой лежат
+  // полоса опыта и карточка карты. Тёмная здесь только сама карта.
+  root: { flex: 1, backgroundColor: palette.parchment },
   barWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   mapWrap: {
     flex: 1,

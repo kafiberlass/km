@@ -12,6 +12,9 @@ export const palette = {
   fog: '#2E1F17',
   fogSoft: '#3A2A1E',
 
+  /** Панель вкладок — тёплый коричневый, светлее карты. */
+  bark: '#6B4A2F',
+
   /** Открытая земля и карточки. */
   sand: '#D9C4A0',
   parchment: '#EFE6D2',
