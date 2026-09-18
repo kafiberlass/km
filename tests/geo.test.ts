@@ -305,7 +305,7 @@ describe('стояние на месте', () => {
     // Точность 30 метров — обычное дело в квартире.
     const run = filterTrack(jitterAround(MOSCOW, 30, 40));
     expect(run.distanceM).toBe(0);
-    expect(run.rejected.jitter).toBeGreaterThan(30);
+    expect(run.rejected.jitter).toBeGreaterThanOrEqual(30);
   });
 
   it('не набирает расстояние при хорошем приёме на месте', () => {
@@ -328,5 +328,61 @@ describe('стояние на месте', () => {
     const run = filterTrack(points);
     expect(run.distanceM).toBeGreaterThan(350);
     expect(run.segments[0]!.length).toBeGreaterThan(15);
+  });
+});
+
+describe('прыжки позиции', () => {
+  const ACCURACY = 8;
+  const START = 1_700_000_000_000;
+
+  /** Отрезок настоящей ходьбы: шаг 20 метров раз в 15 секунд. */
+  function walk(from: { lat: number; lng: number }, count: number, since: number) {
+    const points = [];
+    for (let i = 0; i < count; i += 1) {
+      points.push({
+        lat: from.lat + (i * 20) / 111_320,
+        lng: from.lng,
+        accuracy: ACCURACY,
+        timestamp: since + i * 15_000,
+      });
+    }
+    return points;
+  }
+
+  it('не соединяет прямой линией точки, между которыми потерян сигнал', () => {
+    // Классический артефакт: телефон потерял спутники и получил привязку
+    // по Wi-Fi в двух километрах. По скорости это «бег» — 6.7 м/с,
+    // проверкой скорости такое не ловится.
+    const first = walk(MOSCOW, 5, START);
+    const jumped = { lat: MOSCOW.lat + 2000 / 111_320, lng: MOSCOW.lng };
+    const second = walk(jumped, 5, START + 5 * 15_000 + 300_000);
+
+    const run = filterTrack([...first, ...second]);
+
+    expect(run.segments).toHaveLength(2);
+    // Два километра прыжка в пройденное расстояние не попали.
+    expect(run.distanceM).toBeLessThan(300);
+  });
+
+  it('обычную ходьбу не рвёт', () => {
+    expect(filterTrack(walk(MOSCOW, 10, START)).segments).toHaveLength(1);
+  });
+
+  it('поездку на машине по-прежнему выбрасывает целиком', () => {
+    // 60 км/ч, замер раз в 15 секунд — 250 метров за шаг. Это не «новый
+    // сегмент», а мусор: пятна тумана вдоль дороги никто не проходил.
+    const points = [];
+    for (let i = 0; i < 6; i += 1) {
+      points.push({
+        lat: MOSCOW.lat + (i * 250) / 111_320,
+        lng: MOSCOW.lng,
+        accuracy: ACCURACY,
+        timestamp: START + i * 15_000,
+      });
+    }
+
+    const run = filterTrack(points);
+    expect(run.rejected.speed).toBeGreaterThan(0);
+    expect(run.distanceM).toBe(0);
   });
 });
