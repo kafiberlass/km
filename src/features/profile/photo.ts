@@ -9,10 +9,35 @@
  * не показалась бы, потому что её закешировал бы сам <Image>.
  */
 
-import * as ImagePicker from 'expo-image-picker';
-import { Directory, File, Paths } from 'expo-file-system';
-
 import { parseAvatar, photoAvatarValue } from './avatars';
+
+type PickerModule = typeof import('expo-image-picker');
+type FileSystemModule = typeof import('expo-file-system');
+
+/**
+ * Модуль подгружается лениво, а не обычным import наверху файла.
+ *
+ * expo-image-picker ищет свою нативную часть в момент загрузки модуля,
+ * а не в момент вызова. Пока приложение не пересобрано, обычный import
+ * роняет весь экран профиля целиком — с сообщением про «missing default
+ * export», по которому ни за что не догадаться, что дело в пересборке.
+ *
+ * Так исключение приходит туда, где его можно объяснить человеку: в момент
+ * нажатия на кнопку. Правило общее для любого нативного модуля, который
+ * добавляют после того, как приложение уже стоит на телефоне: код приезжает
+ * мгновенно, нативная часть — только с кабелем, и между этими моментами
+ * приложение обязано оставаться живым.
+ */
+function loadPicker(): PickerModule {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('expo-image-picker') as PickerModule;
+}
+
+/** По той же причине, что и выбор фотографий: работа с файлами — тоже нативная. */
+function loadFileSystem(): FileSystemModule {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('expo-file-system') as FileSystemModule;
+}
 
 const FOLDER = 'avatars';
 
@@ -44,6 +69,8 @@ function isMissingNativeModule(error: unknown): boolean {
  */
 export async function pickAvatarPhoto(previous: string | null): Promise<PickResult> {
   try {
+    const ImagePicker = loadPicker();
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return { status: 'denied' };
 
@@ -57,6 +84,8 @@ export async function pickAvatarPhoto(previous: string | null): Promise<PickResu
     });
 
     if (picked.canceled || !picked.assets[0]) return { status: 'cancelled' };
+
+    const { Directory, File, Paths } = loadFileSystem();
 
     const directory = new Directory(Paths.document, FOLDER);
     if (!directory.exists) directory.create({ intermediates: true });
@@ -79,6 +108,7 @@ export function removePhoto(value: string | null): void {
   if (avatar.kind !== 'photo') return;
 
   try {
+    const { File } = loadFileSystem();
     const file = new File(avatar.uri);
     if (file.exists) file.delete();
   } catch {
