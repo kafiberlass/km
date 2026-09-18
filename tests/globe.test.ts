@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { LAND_RINGS } from '@/features/globe/land';
 import {
+  GLOBE_SCALE_START,
   GLOBE_ZOOM_FULL,
   GLOBE_ZOOM_NONE,
+  GLOBE_ZOOM_START,
   globeOpacity,
+  globeScale,
   graticule,
   projectGlobe,
   ringVisible,
+  smoothstep,
+  spaceOpacity,
   type GlobeView,
 } from '@/features/globe/projection';
 
@@ -76,6 +81,50 @@ describe('перетекание карты в планету', () => {
       expect(value).toBeLessThanOrEqual(1);
       previous = value;
     }
+  });
+});
+
+describe('две фазы перехода', () => {
+  // Главное свойство всей анимации: карта и планета не видны
+  // одновременно. Пока они накладывались, это выглядело браком.
+  it('пока шар хоть немного виден, карта уже полностью скрыта небом', () => {
+    for (let zoom = GLOBE_ZOOM_NONE + 1; zoom >= 0; zoom -= 0.05) {
+      if (globeOpacity(zoom) > 0) expect(spaceOpacity(zoom)).toBe(1);
+    }
+  });
+
+  it('небо проявляется раньше шара', () => {
+    expect(GLOBE_ZOOM_START).toBeLessThan(GLOBE_ZOOM_NONE);
+    expect(spaceOpacity(GLOBE_ZOOM_START)).toBe(1);
+    expect(globeOpacity(GLOBE_ZOOM_START)).toBe(0);
+  });
+
+  it('небо гаснет обратно на городских масштабах', () => {
+    expect(spaceOpacity(GLOBE_ZOOM_NONE)).toBe(0);
+    expect(spaceOpacity(15)).toBe(0);
+  });
+
+  it('шар подрастает от неполного размера до полного', () => {
+    expect(globeScale(GLOBE_ZOOM_START)).toBeCloseTo(GLOBE_SCALE_START, 6);
+    expect(globeScale(GLOBE_ZOOM_FULL)).toBeCloseTo(1, 6);
+
+    let previous = 0;
+    for (let zoom = GLOBE_ZOOM_START; zoom >= GLOBE_ZOOM_FULL; zoom -= 0.1) {
+      const value = globeScale(zoom);
+      expect(value).toBeGreaterThanOrEqual(previous - 1e-9);
+      previous = value;
+    }
+  });
+
+  it('сглаживание зажато в границы и плавное на концах', () => {
+    expect(smoothstep(-1)).toBe(0);
+    expect(smoothstep(0)).toBe(0);
+    expect(smoothstep(0.5)).toBeCloseTo(0.5, 6);
+    expect(smoothstep(1)).toBe(1);
+    expect(smoothstep(2)).toBe(1);
+    // У линейного проявления виден момент старта, у сглаженного — нет.
+    expect(smoothstep(0.1)).toBeLessThan(0.1);
+    expect(smoothstep(0.9)).toBeGreaterThan(0.9);
   });
 });
 

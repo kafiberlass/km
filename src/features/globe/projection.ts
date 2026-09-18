@@ -31,23 +31,56 @@ export interface GlobePoint {
 }
 
 /**
- * Зум, ниже которого видна только планета, и зум, выше которого её нет.
+ * Переход «карта -> планета» разложен на две фазы, и они не пересекаются.
  *
- * Между ними — плавное перетекание: плоская карта гаснет, шар проявляется.
- * Границы поднимали после первой же проверки на живом телефоне: от масштаба
- * двора до планетарного четырнадцать ступеней зума, и человек, сводя пальцы
- * пять раз подряд, просто не доходил до шара и решал, что его нет.
- * Теперь планета начинает проступать уже на масштабе страны.
+ * Сначала карта растворяется в ночи (`spaceOpacity`), и только потом,
+ * на уже чёрном небе, проявляется и подрастает шар (`globeOpacity`,
+ * `globeScale`). Одновременное проявление выглядело браком: сквозь
+ * полупрозрачные материки просвечивали тайлы, две картинки накладывались
+ * друг на друга.
+ *
+ * Границы: отдаление идёт справа налево, от 5 (страна на экране)
+ * до 2.5 (планета целиком).
  */
-export const GLOBE_ZOOM_FULL = 2.5;
 export const GLOBE_ZOOM_NONE = 5;
+/** К этому зуму карта уже полностью скрыта под ночным небом. */
+export const SPACE_ZOOM_FULL = 3.9;
+/** С этого зума начинает проявляться сам шар — заведомо позже неба. */
+export const GLOBE_ZOOM_START = 3.7;
+export const GLOBE_ZOOM_FULL = 2.5;
 
-/** Насколько планета непрозрачна на данном зуме. Воркет: зовётся из UI-потока. */
+/** Планета появляется не сразу во всю величину, а подрастает. */
+export const GLOBE_SCALE_START = 0.75;
+
+/** Сглаживание: у линейного проявления видно момент старта и остановки. */
+export function smoothstep(t: number): number {
+  'worklet';
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  return x * x * (3 - 2 * x);
+}
+
+/** Доля перехода от `from` (0) к `to` (1) для зума, который убывает. */
+function rampDown(zoom: number, from: number, to: number): number {
+  'worklet';
+  return smoothstep((from - zoom) / (from - to));
+}
+
+/** Непрозрачность ночного неба, которое скрывает плоскую карту. */
+export function spaceOpacity(zoom: number): number {
+  'worklet';
+  return rampDown(zoom, GLOBE_ZOOM_NONE, SPACE_ZOOM_FULL);
+}
+
+/** Непрозрачность самого шара. Воркет: зовётся из UI-потока каждый кадр. */
 export function globeOpacity(zoom: number): number {
   'worklet';
-  if (zoom <= GLOBE_ZOOM_FULL) return 1;
-  if (zoom >= GLOBE_ZOOM_NONE) return 0;
-  return (GLOBE_ZOOM_NONE - zoom) / (GLOBE_ZOOM_NONE - GLOBE_ZOOM_FULL);
+  return rampDown(zoom, GLOBE_ZOOM_START, GLOBE_ZOOM_FULL);
+}
+
+/** Масштаб шара: подрастает вместе с проявлением. */
+export function globeScale(zoom: number): number {
+  'worklet';
+  return GLOBE_SCALE_START + (1 - GLOBE_SCALE_START) * globeOpacity(zoom);
 }
 
 /**

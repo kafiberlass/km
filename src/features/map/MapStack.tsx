@@ -19,7 +19,7 @@ import type { FogGeometry } from '@/features/fog/geometry';
 import type { Friend } from '@/features/friends/types';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import { GlobeOverlay } from '@/features/globe/GlobeOverlay';
-import { GLOBE_ZOOM_NONE } from '@/features/globe/projection';
+import { GLOBE_ZOOM_NONE, GLOBE_ZOOM_START } from '@/features/globe/projection';
 
 import { MapCanvas } from './MapCanvas';
 import { SelfMarker } from './SelfMarker';
@@ -65,10 +65,13 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
 
   const handleIdle = useCallback(
     (state: ViewStateChangeEvent) => {
-      // Шар доворачивается только когда планета видна или вот-вот появится:
-      // на городских масштабах это лишний ре-рендер на каждое движение карты.
-      if (state.zoom < GLOBE_ZOOM_NONE + MOUNT_MARGIN) {
+      // Шар доворачивается, только пока он ещё не проявился. Поворот
+      // видимой планеты был бы рывком: геометрия пересобирается разом,
+      // плавно повернуть её нечем. Так шар появляется уже смотрящим
+      // на то место, которое человек разглядывал на карте.
+      if (state.zoom >= GLOBE_ZOOM_START) {
         const [lng, lat] = state.center;
+        // Меньше градуса на глобусе не видно — а ре-рендер стоит денег.
         setGlobeCenter((current) =>
           Math.abs(current.lng - lng) < 1 && Math.abs(current.lat - lat) < 1
             ? current

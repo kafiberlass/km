@@ -26,14 +26,26 @@ import {
   Skia,
   vec,
 } from '@shopify/react-native-skia';
-import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import type { LngLat } from '@/core/geo/mercator';
 import { palette } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 
 import { LAND_RINGS } from './land';
-import { globeOpacity, graticule, projectGlobe, ringVisible, type GlobeView } from './projection';
+import {
+  globeOpacity,
+  globeScale,
+  graticule,
+  projectGlobe,
+  ringVisible,
+  spaceOpacity,
+  type GlobeView,
+} from './projection';
 
 /** Доля меньшей стороны экрана, которую занимает диаметр планеты. */
 const DISC_RATIO = 0.82;
@@ -104,7 +116,15 @@ export function GlobeOverlay({ camera, center, me, width, height }: Props) {
 
   const here = useMemo(() => (me ? projectGlobe(me.lng, me.lat, view) : null), [me, view]);
 
-  const style = useAnimatedStyle(() => ({ opacity: globeOpacity(camera.value.zoom) }));
+  // Небо появляется первым и к началу проявления шара уже непрозрачно:
+  // иначе сквозь материки просвечивают тайлы карты и две картинки
+  // накладываются друг на друга.
+  const style = useAnimatedStyle(() => ({ opacity: spaceOpacity(camera.value.zoom) }));
+
+  // Шар живёт своей анимацией внутри уже чёрного неба: проявляется
+  // и подрастает. Оба значения считаются в UI-потоке каждый кадр.
+  const bodyOpacity = useDerivedValue(() => globeOpacity(camera.value.zoom));
+  const bodyTransform = useDerivedValue(() => [{ scale: globeScale(camera.value.zoom) }]);
 
   return (
     <Animated.View style={[styles.wrap, style]} pointerEvents="none">
@@ -124,58 +144,60 @@ export function GlobeOverlay({ camera, center, me, width, height }: Props) {
           />
         ))}
 
-        {/* Атмосфера: размытое кольцо чуть больше диска. */}
-        <Group>
-          <Blur blur={18} />
-          <Circle
-            cx={view.cx}
-            cy={view.cy}
-            r={view.r + 6}
-            color={palette.gold}
+        <Group opacity={bodyOpacity} origin={vec(view.cx, view.cy)} transform={bodyTransform}>
+          {/* Атмосфера: размытое кольцо чуть больше диска. */}
+          <Group>
+            <Blur blur={18} />
+            <Circle
+              cx={view.cx}
+              cy={view.cy}
+              r={view.r + 6}
+              color={palette.gold}
+              style="stroke"
+              strokeWidth={10}
+              opacity={0.35}
+            />
+          </Group>
+
+          {/* Океан. Свет падает сверху слева, к краю шар уходит в тень —
+              без этого диск читается как наклейка, а не как шар. */}
+          <Circle cx={view.cx} cy={view.cy} r={view.r}>
+            <RadialGradient
+              c={vec(view.cx - view.r * 0.3, view.cy - view.r * 0.35)}
+              r={view.r * 1.45}
+              colors={[palette.tealBright, palette.teal, palette.fog]}
+              positions={[0, 0.55, 1]}
+            />
+          </Circle>
+
+          <Path path={grid} style="stroke" strokeWidth={0.8} color={palette.parchment} opacity={0.18} />
+
+          <Path path={land} color={palette.ground} opacity={0.95} />
+          <Path
+            path={land}
             style="stroke"
-            strokeWidth={10}
+            strokeWidth={1}
+            color={palette.textDark}
             opacity={0.35}
           />
+
+          {/* Затенение края поверх суши: тень должна ложиться и на материки. */}
+          <Circle cx={view.cx} cy={view.cy} r={view.r}>
+            <RadialGradient
+              c={vec(view.cx - view.r * 0.25, view.cy - view.r * 0.3)}
+              r={view.r * 1.3}
+              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
+              positions={[0, 0.6, 1]}
+            />
+          </Circle>
+
+          {here?.front && (
+            <Group>
+              <Circle cx={here.x} cy={here.y} r={12} color={palette.ember} opacity={0.35} />
+              <Circle cx={here.x} cy={here.y} r={4.5} color={palette.ember} />
+            </Group>
+          )}
         </Group>
-
-        {/* Океан. Свет падает сверху слева, к краю шар уходит в тень —
-            без этого диск читается как наклейка, а не как шар. */}
-        <Circle cx={view.cx} cy={view.cy} r={view.r}>
-          <RadialGradient
-            c={vec(view.cx - view.r * 0.3, view.cy - view.r * 0.35)}
-            r={view.r * 1.45}
-            colors={[palette.tealBright, palette.teal, palette.fog]}
-            positions={[0, 0.55, 1]}
-          />
-        </Circle>
-
-        <Path path={grid} style="stroke" strokeWidth={0.8} color={palette.parchment} opacity={0.18} />
-
-        <Path path={land} color={palette.ground} opacity={0.95} />
-        <Path
-          path={land}
-          style="stroke"
-          strokeWidth={1}
-          color={palette.textDark}
-          opacity={0.35}
-        />
-
-        {/* Затенение края поверх суши: тень должна ложиться и на материки. */}
-        <Circle cx={view.cx} cy={view.cy} r={view.r}>
-          <RadialGradient
-            c={vec(view.cx - view.r * 0.25, view.cy - view.r * 0.3)}
-            r={view.r * 1.3}
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
-            positions={[0, 0.6, 1]}
-          />
-        </Circle>
-
-        {here?.front && (
-          <Group>
-            <Circle cx={here.x} cy={here.y} r={12} color={palette.ember} opacity={0.35} />
-            <Circle cx={here.x} cy={here.y} r={4.5} color={palette.ember} />
-          </Group>
-        )}
       </Canvas>
     </Animated.View>
   );

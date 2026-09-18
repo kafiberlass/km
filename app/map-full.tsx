@@ -24,7 +24,7 @@ import { districtAt, progressOf } from '@/core/geo/districts';
 import { palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
-import { GLOBE_ZOOM_FULL } from '@/features/globe/projection';
+import { GLOBE_ZOOM_START } from '@/features/globe/projection';
 import { useFriends } from '@/features/friends';
 import { MapStack } from '@/features/map/MapStack';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -37,6 +37,14 @@ const CLOSE_ZOOM = 16;
 
 /** Куда уводит кнопка с глобусом: дальше уже некуда, там планета. */
 const PLANET_ZOOM = 0;
+
+/**
+ * Длительности перелётов. Две секунды — это не «медленно», а единственный
+ * способ увидеть сам переход: за 700 мс четырнадцать ступеней зума
+ * пролетают смазанным рывком, и планета просто возникает.
+ */
+const FLIGHT_TO_PLANET_MS = 2000;
+const FLIGHT_BACK_MS = 1600;
 
 export default function FullMapScreen() {
   const insets = useSafeAreaInsets();
@@ -94,17 +102,18 @@ export default function FullMapScreen() {
    * от своего двора до орбиты, никто не станет — поэтому туда есть прямой
    * рейс. Повторное нажатие возвращает обратно к себе.
    */
-  const togglePlanet = useCallback(async () => {
-    if (camera.value.zoom <= GLOBE_ZOOM_FULL) {
-      await centerOnMe();
-      return;
-    }
+  const togglePlanet = useCallback(() => {
+    // Своя точка берётся известная, без запроса свежей: ждать фикс GPS
+    // секунду, прежде чем тронуть камеру, — это подвисшая кнопка.
+    const center: [number, number] = [myPoint.lng, myPoint.lat];
+    const onPlanet = camera.value.zoom <= GLOBE_ZOOM_START;
+
     cameraRef.current?.flyTo({
-      center: [myPoint.lng, myPoint.lat],
-      zoom: PLANET_ZOOM,
-      duration: 1400,
+      center,
+      zoom: onPlanet ? CLOSE_ZOOM : PLANET_ZOOM,
+      duration: onPlanet ? FLIGHT_BACK_MS : FLIGHT_TO_PLANET_MS,
     });
-  }, [camera, centerOnMe, myPoint]);
+  }, [camera, myPoint]);
 
   const toggle = useCallback(() => {
     if (tracking) void stop();
@@ -152,7 +161,7 @@ export default function FullMapScreen() {
 
         <View style={[styles.side, { bottom: insets.bottom + 96 }]} pointerEvents="box-none">
           <Pressable
-            onPress={() => void togglePlanet()}
+            onPress={togglePlanet}
             style={({ pressed }) => [styles.round, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Показать планету целиком"
