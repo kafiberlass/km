@@ -18,15 +18,13 @@ import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelXpRequirement } from '@/core/rules/xp';
 import { palette, spacing } from '@/core/theme/tokens';
-import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
+import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { useFriends, usePublishPosition } from '@/features/friends';
-import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
 import { getFlag, setFlag } from '@/core/db/kv';
-import { MapCanvas } from '@/features/map/MapCanvas';
-import { SelfMarker } from '@/features/map/SelfMarker';
+import { MapStack } from '@/features/map/MapStack';
 import { useAutoWalk } from '@/features/tracking/useAutoWalk';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -45,7 +43,6 @@ const CLOSE_ZOOM = 16;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const [size, setSize] = useState({ width: 0, height: 0 });
   const [showFriends, setShowFriends] = useState(true);
   const cameraRef = useRef<CameraRef>(null);
 
@@ -157,132 +154,112 @@ export default function MapScreen() {
       </View>
 
       <View style={styles.mapWrap}>
-        <MapCanvas
+        <MapStack
           ref={cameraRef}
           camera={camera}
-          initialCenter={[origin.lng, origin.lat]}
-          onLayoutSize={setSize}
-        />
-
-        {size.width > 0 && (
-          <FogLayer
-            geometry={geometry}
-            origin={origin}
-            camera={camera}
-            width={size.width}
-            height={size.height}
-          />
-        )}
-
-        {size.width > 0 && (
-          <SelfMarker
-            point={myPoint}
-            origin={origin}
-            camera={camera}
-            width={size.width}
-            height={size.height}
-            active={tracking}
-          />
-        )}
-
-        {/* Друзья рисуются НАД туманом: иначе метка исчезает ровно там,
-            где ты ещё не гулял, — то есть почти везде. */}
-        {size.width > 0 && showFriends && (
-          <FriendsLayer
-            friends={friends}
-            origin={origin}
-            camera={camera}
-            width={size.width}
-            height={size.height}
-          />
-        )}
-
-        <View style={styles.overlayTop} pointerEvents="box-none">
-          <View style={styles.topLeft} pointerEvents="box-none">
-            <Chip
-              label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
-              icon={<Feather name="map" size={16} color={palette.textDark} />}
-            />
-            <Chip
-              label={
-                here.done
-                  ? 'КВАРТАЛ ЗАКРЫТ'
-                  : `КВАРТАЛ ${Math.round(here.ratio * 100)}%`
-              }
-              icon={
-                <Feather
-                  name={here.done ? 'check-circle' : 'grid'}
-                  size={16}
-                  color={here.done ? palette.teal : palette.textDark}
-                />
-              }
-            />
-          </View>
-
-          <View style={styles.topRight} pointerEvents="box-none">
-            <Pressable onPress={toggleAutoWalk}>
-              <Chip
-                label={autoWalk ? 'АВТО ВКЛ' : 'АВТО ВЫКЛ'}
-                icon={
-                  <Feather
-                    name="activity"
-                    size={16}
-                    color={autoWalk ? palette.textDark : palette.textMuted}
-                  />
-                }
-                style={autoWalk ? undefined : styles.chipOff}
-              />
-            </Pressable>
-
-            <Pressable onPress={() => setShowFriends((value) => !value)}>
-              <Chip
-                label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}
-                icon={
-                  <Feather
-                    name="users"
-                    size={16}
-                    color={showFriends ? palette.textDark : palette.textMuted}
-                  />
-                }
-                style={showFriends ? undefined : styles.chipOff}
-              />
-            </Pressable>
-
-            <Link href="/dev" asChild>
-              <Text style={styles.devLink}>DEV</Text>
-            </Link>
-          </View>
-        </View>
-
-        <Pressable
-          onPress={() => void centerOnMe()}
-          style={({ pressed }) => [styles.locate, pressed && styles.locatePressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Вернуться к своей точке"
+          origin={origin}
+          geometry={geometry}
+          myPoint={myPoint}
+          tracking={tracking}
+          friends={showFriends ? friends : []}
         >
-          <Feather name="navigation" size={20} color={palette.textDark} />
-        </Pressable>
-
-        <View style={styles.overlayBottom} pointerEvents="box-none">
-          {toast && (
-            <Toast title={toast.title} subtitle={toast.subtitle} onDismiss={dismissToast} />
-          )}
-
-          {tracking && (
-            <View style={styles.liveRow}>
-              <Text style={styles.liveText}>
-                {(distanceM / 1000).toFixed(2)} км · {stats.points} точек · сборка{' '}
-                {stats.buildMs} мс
-              </Text>
+          <View style={styles.overlayTop} pointerEvents="box-none">
+            <View style={styles.topLeft} pointerEvents="box-none">
+              <Chip
+                label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
+                icon={<Feather name="map" size={16} color={palette.textDark} />}
+              />
+              <Chip
+                label={
+                  here.done
+                    ? 'КВАРТАЛ ЗАКРЫТ'
+                    : `КВАРТАЛ ${Math.round(here.ratio * 100)}%`
+                }
+                icon={
+                  <Feather
+                    name={here.done ? 'check-circle' : 'grid'}
+                    size={16}
+                    color={here.done ? palette.teal : palette.textDark}
+                  />
+                }
+              />
             </View>
-          )}
 
-          <ActionButton
-            label={tracking ? 'ЗАВЕРШИТЬ ПРОГУЛКУ' : 'НАЧАТЬ ПРОГУЛКУ'}
-            onPress={toggle}
-            tone={tracking ? 'ghost' : 'primary'}
-          />
-        </View>
+            <View style={styles.topRight} pointerEvents="box-none">
+              <Pressable onPress={toggleAutoWalk}>
+                <Chip
+                  label={autoWalk ? 'АВТО ВКЛ' : 'АВТО ВЫКЛ'}
+                  icon={
+                    <Feather
+                      name="activity"
+                      size={16}
+                      color={autoWalk ? palette.textDark : palette.textMuted}
+                    />
+                  }
+                  style={autoWalk ? undefined : styles.chipOff}
+                />
+              </Pressable>
+
+              <Pressable onPress={() => setShowFriends((value) => !value)}>
+                <Chip
+                  label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}
+                  icon={
+                    <Feather
+                      name="users"
+                      size={16}
+                      color={showFriends ? palette.textDark : palette.textMuted}
+                    />
+                  }
+                  style={showFriends ? undefined : styles.chipOff}
+                />
+              </Pressable>
+
+              <Link href="/dev" asChild>
+                <Text style={styles.devLink}>DEV</Text>
+              </Link>
+            </View>
+          </View>
+
+          <Link href="/map-full" asChild>
+            <Pressable
+              style={({ pressed }) => [styles.expand, pressed && styles.locatePressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть карту во весь экран"
+            >
+              <Feather name="maximize-2" size={20} color={palette.textDark} />
+            </Pressable>
+          </Link>
+
+          <Pressable
+            onPress={() => void centerOnMe()}
+            style={({ pressed }) => [styles.locate, pressed && styles.locatePressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Вернуться к своей точке"
+          >
+            <Feather name="navigation" size={20} color={palette.textDark} />
+          </Pressable>
+
+          <View style={styles.overlayBottom} pointerEvents="box-none">
+            {toast && (
+              <Toast title={toast.title} subtitle={toast.subtitle} onDismiss={dismissToast} />
+            )}
+
+            {tracking && (
+              <View style={styles.liveRow}>
+                <Text style={styles.liveText}>
+                  {(distanceM / 1000).toFixed(2)} км · {stats.points} точек · сборка{' '}
+                  {stats.buildMs} мс
+                </Text>
+              </View>
+            )}
+
+            <ActionButton
+              label={tracking ? 'ЗАВЕРШИТЬ ПРОГУЛКУ' : 'НАЧАТЬ ПРОГУЛКУ'}
+              onPress={toggle}
+              tone={tracking ? 'ghost' : 'primary'}
+            />
+          </View>
+        </MapStack>
       </View>
     </View>
   );
@@ -326,6 +303,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.md,
     bottom: 96,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.parchmentBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Над кнопкой «к себе», в той же колонке: обе относятся к карте.
+  expand: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: 152,
     width: 48,
     height: 48,
     borderRadius: 24,

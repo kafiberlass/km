@@ -28,6 +28,12 @@ export interface MapCanvasProps {
   camera: SharedValue<SharedCamera>;
   initialCenter: [number, number];
   initialZoom?: number;
+  /**
+   * Нижняя граница зума. Ноль — весь мир на экране: именно там плоская
+   * карта уступает место глобусу. Раньше стояло 10 (район города),
+   * и отдалиться дальше своего города было просто нельзя.
+   */
+  minZoom?: number;
   onLayoutSize?: (size: { width: number; height: number }) => void;
   /** Вызывается, когда жест закончился — момент для тяжёлой пересборки. */
   onIdle?: (state: ViewStateChangeEvent) => void;
@@ -35,7 +41,7 @@ export interface MapCanvasProps {
 }
 
 export const MapCanvas = forwardRef<CameraRef, MapCanvasProps>(function MapCanvas(
-  { camera, initialCenter, initialZoom = 15, onLayoutSize, onIdle, children },
+  { camera, initialCenter, initialZoom = 15, minZoom = 0, onLayoutSize, onIdle, children },
   ref,
 ) {
   const mapStyle = useMemo(() => buildMapStyle(), []);
@@ -87,7 +93,7 @@ export const MapCanvas = forwardRef<CameraRef, MapCanvasProps>(function MapCanva
         <Camera
           ref={ref}
           initialViewState={{ center: initialCenter, zoom: initialZoom }}
-          minZoom={10}
+          minZoom={minZoom}
           maxZoom={18}
           pitch={0}
         />
