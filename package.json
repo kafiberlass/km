@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "setup:ios": "bash scripts/setup-ios.sh",
+    "setup:ios:friend": "bash scripts/setup-ios.sh --release",
     "prebuild": "expo prebuild --clean",
     "test": "vitest run",
     "test:watch": "vitest",
