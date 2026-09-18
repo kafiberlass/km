@@ -202,6 +202,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       districtsDone: completedCount(districts),
     });
 
+    catchUpAchievements(set, get);
+
     get().resume();
     get().watch();
   },
@@ -532,6 +534,40 @@ function openWalk(
     ?.start(WALK_TRACKING_OPTIONS)
     .then(() => set({ background: provider?.isBackgroundActive?.() ?? false }))
     .catch((error: unknown) => console.warn('[walk] не удалось поднять точность', error));
+}
+
+/**
+ * Догнать ачивки при запуске.
+ *
+ * Правила считаются в конце прогулки, и этого достаточно, пока набор
+ * не меняется. Но стоит добавить новую ачивку — и человек, давно прошедший
+ * её условие, узнаёт об этом только после следующего выхода на улицу.
+ * Пересчёт при старте закрывает этот разрыв: заслуженное приходит сразу.
+ */
+function catchUpAchievements(
+  set: (partial: Partial<WalkState>) => void,
+  get: () => WalkState,
+): void {
+  const snapshot = repo.buildSnapshot(repo.countCells() || 1);
+  const { newlyUnlocked, xpAwarded } = evaluate(snapshot, repo.unlockedAchievements());
+  if (newlyUnlocked.length === 0) return;
+
+  for (const achievement of newlyUnlocked) {
+    repo.unlockAchievement(achievement.code, Date.now());
+    // Без ссылки на сессию: эта ачивка не заработана конкретной прогулкой,
+    // она догнала человека за всё прошлое разом.
+    repo.appendXpEvent('achievement', achievement.xpReward, achievement.code, null);
+  }
+
+  const profile = repo.getProfile();
+  const next = applyXp({ level: profile.level, xp: profile.xp } satisfies LevelState, xpAwarded);
+  repo.updateProfile({ level: next.level, xp: next.xp });
+
+  set({
+    level: next.level,
+    xp: next.xp,
+    toast: buildToast(newlyUnlocked, next.levelUps) ?? get().toast,
+  });
 }
 
 function flushPending(sessionId: string, segment: number): void {
