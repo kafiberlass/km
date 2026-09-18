@@ -121,14 +121,6 @@ export function projectGlobe(lng: number, lat: number, view: GlobeView): GlobePo
   return { x: view.cx + x * view.r, y: view.cy - y * view.r, front };
 }
 
-/** Видна ли хоть часть кольца: если нет, его можно не рисовать вовсе. */
-export function ringVisible(ring: readonly number[], view: GlobeView): boolean {
-  for (let i = 0; i < ring.length; i += 2) {
-    if (projectGlobe(ring[i]!, ring[i + 1]!, view).front) return true;
-  }
-  return false;
-}
-
 /** Меридианы и параллели через каждые `stepDeg` градусов — как линии на глобусе. */
 export function graticule(stepDeg = 30): number[][] {
   const lines: number[][] = [];
@@ -180,4 +172,62 @@ export function globeMarkers<T>(
   }
 
   return markers;
+}
+
+/**
+ * Развести метки, попавшие в одну точку.
+ *
+ * На шаре радиусом в пол-экрана один градус — это меньше двух пикселей,
+ * а люди в одном городе отстоят друг от друга на сотые доли градуса.
+ * Без разведения метка друга оказывается ровно под своей: рисуются обе,
+ * видно одну, и выглядит это как «друга на планете нет».
+ *
+ * Слипшиеся метки раскладываются по кругу вокруг общего центра. Точность
+ * при этом теряется — но в масштабе планеты её и так нет: важно, что
+ * человек рядом, а не в Австралии.
+ */
+export function spreadMarkers<T extends { x: number; y: number }>(
+  items: readonly T[],
+  minGapPx: number,
+): T[] {
+  const result = items.slice();
+  const cluster = new Array<number>(items.length).fill(-1);
+  const clusters: number[][] = [];
+
+  for (let i = 0; i < items.length; i += 1) {
+    if (cluster[i] !== -1) continue;
+
+    const group = [i];
+    cluster[i] = clusters.length;
+
+    for (let j = i + 1; j < items.length; j += 1) {
+      if (cluster[j] !== -1) continue;
+      const distance = Math.hypot(items[j]!.x - items[i]!.x, items[j]!.y - items[i]!.y);
+      if (distance >= minGapPx) continue;
+      cluster[j] = clusters.length;
+      group.push(j);
+    }
+
+    clusters.push(group);
+  }
+
+  for (const group of clusters) {
+    if (group.length < 2) continue;
+
+    const cx = group.reduce((sum, index) => sum + items[index]!.x, 0) / group.length;
+    const cy = group.reduce((sum, index) => sum + items[index]!.y, 0) / group.length;
+
+    group.forEach((index, position) => {
+      // Первая метка уходит вверх, остальные по часовой стрелке:
+      // так порядок не зависит от того, кто первым пришёл в список.
+      const angle = (2 * Math.PI * position) / group.length - Math.PI / 2;
+      result[index] = {
+        ...items[index]!,
+        x: cx + Math.cos(angle) * minGapPx,
+        y: cy + Math.sin(angle) * minGapPx,
+      };
+    });
+  }
+
+  return result;
 }

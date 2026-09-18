@@ -19,7 +19,7 @@ import type { FogGeometry } from '@/features/fog/geometry';
 import type { Friend } from '@/features/friends/types';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import { GlobeOverlay } from '@/features/globe/GlobeOverlay';
-import { GLOBE_ZOOM_NONE, GLOBE_ZOOM_START } from '@/features/globe/projection';
+import { GLOBE_ZOOM_NONE } from '@/features/globe/projection';
 
 import { MapCanvas } from './MapCanvas';
 import { SelfMarker } from './SelfMarker';
@@ -80,21 +80,29 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
     [],
   );
 
+  /**
+   * Планета поворачивается вслед за картой, пока палец ещё на экране.
+   *
+   * Раньше поворот случался только на остановке карты, и на глобусе это
+   * читалось как «шар не крутится»: тянешь — ничего, отпустил — рывок.
+   * Реакция живёт в UI-потоке и будит React только на целых градусах:
+   * мельче на шаре всё равно не видно, а пересборка геометрии стоит денег.
+   */
+  useAnimatedReaction(
+    () => {
+      if (camera.value.zoom >= GLOBE_ZOOM_NONE + MOUNT_MARGIN) return null;
+      return { lng: Math.round(camera.value.lng), lat: Math.round(camera.value.lat) };
+    },
+    (next, previous) => {
+      if (!next) return;
+      if (previous && next.lng === previous.lng && next.lat === previous.lat) return;
+      runOnJS(setGlobeCenter)(next);
+    },
+    [],
+  );
+
   const handleIdle = useCallback(
     (state: ViewStateChangeEvent) => {
-      // Шар доворачивается, только пока он ещё не проявился. Поворот
-      // видимой планеты был бы рывком: геометрия пересобирается разом,
-      // плавно повернуть её нечем. Так шар появляется уже смотрящим
-      // на то место, которое человек разглядывал на карте.
-      if (state.zoom >= GLOBE_ZOOM_START) {
-        const [lng, lat] = state.center;
-        // Меньше градуса на глобусе не видно — а ре-рендер стоит денег.
-        setGlobeCenter((current) =>
-          Math.abs(current.lng - lng) < 1 && Math.abs(current.lat - lat) < 1
-            ? current
-            : { lng, lat },
-        );
-      }
       onIdle?.(state);
     },
     [onIdle],

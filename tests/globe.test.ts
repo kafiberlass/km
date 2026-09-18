@@ -11,8 +11,8 @@ import {
   globeScale,
   graticule,
   projectGlobe,
-  ringVisible,
   smoothstep,
+  spreadMarkers,
   spaceOpacity,
   type GlobeView,
 } from '@/features/globe/projection';
@@ -56,11 +56,6 @@ describe('проекция глобуса', () => {
     }
   });
 
-  it('видимость кольца считается по лицевой стороне', () => {
-    const ring = [150, 0, 160, 10, 170, -10];
-    expect(ringVisible(ring, view)).toBe(false);
-    expect(ringVisible(ring, { ...view, lng0: 160 })).toBe(true);
-  });
 });
 
 describe('перетекание карты в планету', () => {
@@ -142,9 +137,15 @@ describe('данные суши', () => {
     }
   });
 
-  it('Евразия видна с Москвы', () => {
+  it('с Москвы видна суша вокруг', () => {
     const moscow: GlobeView = { ...view, lng0: 37.6, lat0: 55.7 };
-    const visible = LAND_RINGS.filter((ring) => ringVisible(ring, moscow));
+    // Берём по одной точке от каждого кольца: если ни одна не попала
+    // на видимую половину, значит, планета повёрнута не той стороной.
+    const visible = globeMarkers(
+      LAND_RINGS.map((ring) => ({ lng: ring[0]!, lat: ring[1]! })),
+      moscow,
+      (item) => item,
+    );
     expect(visible.length).toBeGreaterThan(5);
   });
 
@@ -176,5 +177,39 @@ describe('метки на планете', () => {
   it('поворот планеты меняет состав видимых меток', () => {
     const markers = globeMarkers(items, { ...view, lng0: 160 }, (item) => item.position);
     expect(markers.map((marker) => marker.item.id)).toEqual(['за горизонтом']);
+  });
+});
+
+describe('разведение слипшихся меток', () => {
+  const GAP = 12;
+
+  it('две метки в одной точке расходятся', () => {
+    const spread = spreadMarkers([{ x: 100, y: 100 }, { x: 100.05, y: 100 }], GAP);
+    const distance = Math.hypot(spread[0]!.x - spread[1]!.x, spread[0]!.y - spread[1]!.y);
+    expect(distance).toBeGreaterThanOrEqual(GAP);
+  });
+
+  it('разведённые метки остаются вокруг общего места', () => {
+    const spread = spreadMarkers([{ x: 100, y: 100 }, { x: 100, y: 100 }], GAP);
+    for (const marker of spread) {
+      expect(Math.hypot(marker.x - 100, marker.y - 100)).toBeCloseTo(GAP, 6);
+    }
+  });
+
+  it('далёкие метки не двигаются', () => {
+    const items = [{ x: 10, y: 10 }, { x: 200, y: 200 }];
+    expect(spreadMarkers(items, GAP)).toEqual(items);
+  });
+
+  it('одиночная метка остаётся на месте', () => {
+    expect(spreadMarkers([{ x: 5, y: 7 }], GAP)).toEqual([{ x: 5, y: 7 }]);
+  });
+
+  it('прочие поля метки сохраняются', () => {
+    const spread = spreadMarkers([
+      { x: 0, y: 0, id: 'я' },
+      { x: 0, y: 0, id: 'брат' },
+    ], GAP);
+    expect(spread.map((marker) => marker.id)).toEqual(['я', 'брат']);
   });
 });

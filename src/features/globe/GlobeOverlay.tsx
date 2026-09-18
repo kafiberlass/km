@@ -44,14 +44,23 @@ import {
   globeScale,
   graticule,
   projectGlobe,
-  ringVisible,
   spaceOpacity,
+  spreadMarkers,
   type GlobeView,
 } from './projection';
 
 /** Доля меньшей стороны экрана, которую занимает диаметр планеты. */
 const DISC_RATIO = 0.82;
 const STAR_COUNT = 70;
+
+/**
+ * На сколько пикселей разводятся метки, попавшие в одну точку.
+ *
+ * Один градус на шаре — меньше двух пикселей, а люди в одном городе
+ * отстоят на сотые доли градуса: без разведения метка друга оказывается
+ * ровно под своей, и видно только одну.
+ */
+const MARKER_GAP = 13;
 
 interface Props {
   camera: SharedValue<SharedCamera>;
@@ -71,28 +80,44 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
   const lng0 = Math.round(center.lng);
   const lat0 = Math.round(center.lat);
 
-  const view = useMemo<GlobeView>(
+  // Диск отдельно от ориентации: при повороте планеты он не меняется,
+  // и всё, что зависит только от него (звёзды), пересобирать незачем.
+  const disc = useMemo(
     () => ({
       cx: width / 2,
       cy: height / 2,
       r: (Math.min(width, height) * DISC_RATIO) / 2,
-      lng0,
-      lat0,
     }),
-    [width, height, lng0, lat0],
+    [width, height],
   );
+
+  const view = useMemo<GlobeView>(() => ({ ...disc, lng0, lat0 }), [disc, lng0, lat0]);
 
   const land = useMemo(() => {
     const path = Skia.Path.Make();
+
     for (const ring of LAND_RINGS) {
-      if (!ringVisible(ring, view)) continue;
+      // Один проход на кольцо, а не два. Раньше видимость проверялась
+      // отдельным проходом через ringVisible, и вся суша проецировалась
+      // дважды — при повороте планеты это ощутимо: 4700 точек на градус.
+      let front = false;
+      const xs: number[] = [];
+      const ys: number[] = [];
+
       for (let i = 0; i < ring.length; i += 2) {
-        const p = projectGlobe(ring[i]!, ring[i + 1]!, view);
-        if (i === 0) path.moveTo(p.x, p.y);
-        else path.lineTo(p.x, p.y);
+        const projected = projectGlobe(ring[i]!, ring[i + 1]!, view);
+        if (projected.front) front = true;
+        xs.push(projected.x);
+        ys.push(projected.y);
       }
+
+      if (!front) continue;
+
+      path.moveTo(xs[0]!, ys[0]!);
+      for (let i = 1; i < xs.length; i += 1) path.lineTo(xs[i]!, ys[i]!);
       path.close();
     }
+
     return path;
   }, [view]);
 
@@ -116,17 +141,38 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
     return path;
   }, [view]);
 
-  const stars = useMemo(() => buildStars(width, height, view), [width, height, view]);
+  const stars = useMemo(() => buildStars(width, height, disc), [width, height, disc]);
 
-  const here = useMemo(() => (me ? projectGlobe(me.lng, me.lat, view) : null), [me, view]);
+  /**
+   * Люди на шаре: своя метка и друзья в одном списке — иначе их не развести
+   * между собой, а на планете все они оказываются в одной точке.
+   */
+  const pins = useMemo(() => {
+    const source: { key: string; color: string; live: boolean; self: boolean; at: LngLat }[] = [];
 
-  // Друзья на обратной стороне Земли не рисуются вовсе: прижимать их
-  // к краю диска, как материки, значило бы показать человека там,
-  // где его нет.
-  const friendMarkers = useMemo(
-    () => globeMarkers(friends, view, (friend) => friend.position),
-    [friends, view],
-  );
+    if (me) source.push({ key: 'me', color: palette.ember, live: true, self: true, at: me });
+
+    for (const friend of friends) {
+      if (!friend.position) continue;
+      source.push({
+        key: friend.id,
+        color: friend.color,
+        // Несвежая позиция гаснет — та же условность, что и на карте:
+        // «был здесь», а не «сейчас здесь».
+        live: isFresh(friend.position),
+        self: false,
+        at: friend.position,
+      });
+    }
+
+    // Друзья на обратной стороне Земли отсеиваются до разведения: иначе
+    // они растащили бы кучку, в которой их нет.
+    const visible = globeMarkers(source, view, (item) => item.at);
+    return spreadMarkers(
+      visible.map(({ item, x, y }) => ({ ...item, x, y })),
+      MARKER_GAP,
+    );
+  }, [me, friends, view]);
 
   // Небо появляется первым и к началу проявления шара уже непрозрачно:
   // иначе сквозь материки просвечивают тайлы карты и две картинки
@@ -203,28 +249,45 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
             />
           </Circle>
 
-          {friendMarkers.map(({ item, x, y }) => {
-            // Несвежая позиция гаснет — та же условность, что и на карте:
-            // «был здесь», а не «сейчас здесь».
-            const live = item.position != null && isFresh(item.position);
-            return (
-              <Group key={item.id}>
-                <Circle cx={x} cy={y} r={9} color={item.color} opacity={live ? 0.3 : 0.15} />
-                <Circle cx={x} cy={y} r={3.5} color={item.color} opacity={live ? 1 : 0.5} />
-              </Group>
-            );
-          })}
-
-          {here?.front && (
-            <Group>
-              <Circle cx={here.x} cy={here.y} r={12} color={palette.ember} opacity={0.35} />
-              <Circle cx={here.x} cy={here.y} r={4.5} color={palette.ember} />
+          {pins.map((pin) => (
+            <Group key={pin.key}>
+              <Circle
+                cx={pin.x}
+                cy={pin.y}
+                r={pin.self ? 13 : 10}
+                color={pin.color}
+                opacity={pin.live ? 0.35 : 0.15}
+              />
+              {/* Тёмная обводка: без неё светлая метка теряется на суше,
+                  а тёмная — в тени по краю шара. */}
+              <Circle
+                cx={pin.x}
+                cy={pin.y}
+                r={pin.self ? 6 : 5.5}
+                color={palette.ink}
+                opacity={pin.live ? 0.9 : 0.4}
+              />
+              <Circle
+                cx={pin.x}
+                cy={pin.y}
+                r={pin.self ? 4.5 : 4}
+                color={pin.color}
+                opacity={pin.live ? 1 : 0.5}
+              />
             </Group>
-          )}
+          ))}
+
         </Group>
       </Canvas>
     </Animated.View>
   );
+}
+
+/** Круг планеты на экране — без привязки к тому, каким боком она повёрнута. */
+interface Disc {
+  cx: number;
+  cy: number;
+  r: number;
 }
 
 interface Star {
@@ -238,7 +301,7 @@ interface Star {
  * Звёзды раскладываются детерминированно: случайные при каждом рендере
  * мерцали бы при любом довороте шара.
  */
-function buildStars(width: number, height: number, view: GlobeView): Star[] {
+function buildStars(width: number, height: number, disc: Disc): Star[] {
   let seed = 20240917;
   const random = () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -252,7 +315,7 @@ function buildStars(width: number, height: number, view: GlobeView): Star[] {
     const x = random() * width;
     const y = random() * height;
     // За планетой звёзд не видно.
-    if (Math.hypot(x - view.cx, y - view.cy) < view.r + 14) continue;
+    if (Math.hypot(x - disc.cx, y - disc.cy) < disc.r + 14) continue;
     stars.push({ x, y, r: 0.6 + random() * 1.3, opacity: 0.25 + random() * 0.5 });
   }
   return stars;
