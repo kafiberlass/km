@@ -58,6 +58,13 @@ export default function ProfileEditScreen() {
       setMessage({ text: 'Нет доступа к фотографиям — разрешите его в настройках', ok: false });
       return;
     }
+    if (result.status === 'needs-rebuild') {
+      setMessage({
+        text: 'Выбор фотографии появится после пересборки: подключите телефон кабелем и выполните npm run setup:ios. Значки работают и так.',
+        ok: false,
+      });
+      return;
+    }
     if (result.status === 'failed') {
       setMessage({ text: 'Не получилось взять фотографию', ok: false });
     }

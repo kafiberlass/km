@@ -59,22 +59,43 @@ AFTER="$(git rev-parse HEAD)"
 
 if [ "$BEFORE" = "$AFTER" ]; then
   bold "
-У вас уже последняя версия — обновлять нечего."
-  exit 0
+Новых изменений нет — код уже последней версии."
+else
+  step "Что приехало"
+  git log --oneline --no-decorate "$BEFORE..$AFTER" | sed 's/^/  /'
 fi
-
-step "Что приехало"
-git log --oneline --no-decorate "$BEFORE..$AFTER" | sed 's/^/  /'
 
 # Нативная часть меняется редко, и только она требует кабеля и пересборки.
 NEEDS_REBUILD=0
-if ! git diff --quiet "$BEFORE" "$AFTER" -- package.json app.json plugins; then
+if [ "$BEFORE" != "$AFTER" ] && ! git diff --quiet "$BEFORE" "$AFTER" -- package.json app.json plugins; then
   NEEDS_REBUILD=1
 fi
 
-if ! git diff --quiet "$BEFORE" "$AFTER" -- package.json package-lock.json; then
-  step "Ставлю зависимости"
+# Проверяем не «приехало ли новое», а «стоит ли всё, что нужно».
+# Обновиться можно и обычным git pull, и тогда сравнивать не с чем:
+# ровно так приложение и осталось без expo-image-picker, а Metro
+# отказался собирать бандл целиком.
+step "Проверяю зависимости"
+MISSING="$(node -e '
+  const fs = require("fs");
+  const deps = Object.keys(require("./package.json").dependencies || {});
+  const missing = deps.filter((name) => !fs.existsSync("node_modules/" + name + "/package.json"));
+  process.stdout.write(missing.join(" "));
+')"
+
+if [ -n "$MISSING" ]; then
+  bold "  Не хватает: $MISSING"
   npm install
+  # Нативный модуль мало поставить — его надо вкомпилировать в приложение.
+  NEEDS_REBUILD=1
+else
+  bold "  Все на месте"
+fi
+
+if [ "$BEFORE" = "$AFTER" ] && [ "$NEEDS_REBUILD" = "0" ]; then
+  bold "
+Ничего делать не нужно."
+  exit 0
 fi
 
 if [ "$NEEDS_REBUILD" = "1" ]; then

@@ -20,7 +20,21 @@ export type PickResult =
   | { status: 'saved'; value: string }
   | { status: 'cancelled' }
   | { status: 'denied' }
+  /** Пакет стоит, но в собранное приложение он не попал — нужна пересборка. */
+  | { status: 'needs-rebuild' }
   | { status: 'failed'; error: unknown };
+
+/**
+ * Отличить «нет нативного модуля» от любой другой поломки.
+ *
+ * Обновление кода приезжает мгновенно, а нативная часть — только с кабелем
+ * и пересборкой. В промежутке выбор фотографии падает, и человек должен
+ * прочитать «нужна пересборка», а не «что-то пошло не так».
+ */
+function isMissingNativeModule(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /native module|nativemodule|not installed|has not been linked/i.test(message);
+}
 
 /**
  * Показать галерею и сохранить выбранное.
@@ -54,6 +68,7 @@ export async function pickAvatarPhoto(previous: string | null): Promise<PickResu
 
     return { status: 'saved', value: photoAvatarValue(target.uri) };
   } catch (error) {
+    if (isMissingNativeModule(error)) return { status: 'needs-rebuild' };
     return { status: 'failed', error };
   }
 }
