@@ -28,7 +28,7 @@ import { getFlag, setFlag } from '@/core/db/kv';
 import { MapCanvas } from '@/features/map/MapCanvas';
 import { SelfMarker } from '@/features/map/SelfMarker';
 import { useAutoWalk } from '@/features/tracking/useAutoWalk';
-import { useLastKnownPosition } from '@/features/tracking/useLastKnown';
+import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { ActionButton, Chip, Toast, XpBar } from '@/ui/widgets';
 import { SunsetHeader } from '@/ui/SunsetHeader';
@@ -94,20 +94,26 @@ export default function MapScreen() {
   // Где я сам. На прогулке — свежая точка трека, до неё — последняя
   // известная системе, а если и её нет, то точка отсчёта: лучше показать
   // метку в примерном месте, чем не показать вовсе.
-  const lastKnown = useLastKnownPosition();
-  const myPoint = livePoint ?? lastKnown ?? origin;
+  const { point: knownPoint, locate } = useMyPosition();
+  const myPoint = livePoint ?? knownPoint ?? origin;
 
   // Прогресс квартала, в котором человек стоит прямо сейчас. Это и есть
   // ответ на «сколько осталось» — в отличие от процента по всему району.
   const hereId = districtAt(myPoint);
   const here = progressOf(districts.get(hereId) ?? 0, hereId);
 
-  const centerOnMe = useCallback(() => {
+  const centerOnMe = useCallback(async () => {
+    // Спрашиваем свежую точку: последняя известная может быть вчерашней
+    // и увести карту в другой район — то есть ровно туда, откуда человек
+    // и пытается вернуться этой кнопкой.
+    const fresh = await locate();
+    const target = fresh ?? myPoint;
+
     // Если человек уже приблизился сильнее — не отдаляем: кнопка должна
     // возвращать к себе, а не сбрасывать масштаб, который он выбрал сам.
     const zoom = Math.max(camera.value.zoom, CLOSE_ZOOM);
-    cameraRef.current?.flyTo({ center: [myPoint.lng, myPoint.lat], zoom, duration: 700 });
-  }, [camera, myPoint.lat, myPoint.lng]);
+    cameraRef.current?.flyTo({ center: [target.lng, target.lat], zoom, duration: 700 });
+  }, [camera, locate, myPoint]);
 
   const toggleAutoWalk = useCallback(() => {
     setAutoWalk((value) => {
@@ -249,7 +255,7 @@ export default function MapScreen() {
         </View>
 
         <Pressable
-          onPress={centerOnMe}
+          onPress={() => void centerOnMe()}
           style={({ pressed }) => [styles.locate, pressed && styles.locatePressed]}
           accessibilityRole="button"
           accessibilityLabel="Вернуться к своей точке"

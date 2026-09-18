@@ -281,3 +281,52 @@ describe('projectToScreenWorklet', () => {
     expect(p.y).toBeLessThan(height / 2);
   });
 });
+
+describe('стояние на месте', () => {
+  /** Случайное дрожание вокруг одной точки — то, что выдаёт приёмник,
+   *  когда человек сидит дома и никуда не идёт. */
+  function jitterAround(center: { lat: number; lng: number }, accuracy: number, count: number) {
+    const points = [];
+    for (let i = 0; i < count; i += 1) {
+      // Детерминированный «шум»: воспроизводимость важнее правдоподобия.
+      const angle = (i * 2.4) % (Math.PI * 2);
+      const radius = accuracy * (0.4 + ((i * 7) % 10) / 10);
+      points.push({
+        lat: center.lat + (radius * Math.sin(angle)) / 111_320,
+        lng: center.lng + (radius * Math.cos(angle)) / (111_320 * Math.cos((center.lat * Math.PI) / 180)),
+        accuracy,
+        timestamp: 1_700_000_000_000 + i * 15_000,
+      });
+    }
+    return points;
+  }
+
+  it('не набирает расстояние при дрожании в помещении', () => {
+    // Точность 30 метров — обычное дело в квартире.
+    const run = filterTrack(jitterAround(MOSCOW, 30, 40));
+    expect(run.distanceM).toBe(0);
+    expect(run.rejected.jitter).toBeGreaterThan(30);
+  });
+
+  it('не набирает расстояние при хорошем приёме на месте', () => {
+    // Даже на улице с точностью 8 метров стояние не должно быть ходьбой.
+    const run = filterTrack(jitterAround(MOSCOW, 8, 40));
+    expect(run.distanceM).toBe(0);
+  });
+
+  it('но настоящая ходьба проходит фильтр', () => {
+    // Полтора метра в секунду, замер раз в 15 секунд — это 22 метра шага.
+    const points = [];
+    for (let i = 0; i < 20; i += 1) {
+      points.push({
+        lat: MOSCOW.lat + (i * 22) / 111_320,
+        lng: MOSCOW.lng,
+        accuracy: 8,
+        timestamp: 1_700_000_000_000 + i * 15_000,
+      });
+    }
+    const run = filterTrack(points);
+    expect(run.distanceM).toBeGreaterThan(350);
+    expect(run.segments[0]!.length).toBeGreaterThan(15);
+  });
+});
