@@ -49,6 +49,8 @@ export default function MapScreen() {
   const level = useWalkStore((s) => s.level);
   const xp = useWalkStore((s) => s.xp);
   const streakDays = useWalkStore((s) => s.streakDays);
+  const displayName = useWalkStore((s) => s.displayName);
+  const avatar = useWalkStore((s) => s.avatar);
   const exploredCells = useWalkStore((s) => s.exploredCells);
   const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
@@ -107,15 +109,18 @@ export default function MapScreen() {
     <View style={styles.root}>
       <SunsetHeader
         level={level}
+        name={displayName}
+        avatar={avatar}
         title={levelTitle(level)}
-        xp={xp}
-        xpRequired={levelXpRequirement(level)}
         streakDays={streakDays}
         topInset={insets.top}
       />
 
       <View style={styles.barWrap}>
-        <XpBar ratio={xp / levelXpRequirement(level)} />
+        <XpBar
+          ratio={xp / levelXpRequirement(level)}
+          label={`${xp} / ${levelXpRequirement(level)} XP`}
+        />
       </View>
 
       <View style={styles.mapWrap}>

@@ -28,6 +28,8 @@ export default function ProfileScreen() {
   const districtsDone = useWalkStore((s) => s.districtsDone);
   const xp = useWalkStore((s) => s.xp);
   const hydrate = useWalkStore((s) => s.hydrate);
+  const displayName = useWalkStore((s) => s.displayName);
+  const avatar = useWalkStore((s) => s.avatar);
 
   const profile = getProfile();
   const { snapshot, unlocked } = useMemo(
@@ -57,7 +59,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.root}>
       <ScreenHeader
-        title={profile.displayName ?? levelTitle(level)}
+        title={displayName ?? levelTitle(level)}
         subtitle={`${levelTitle(level)} · уровень ${level} · ${streak} дней подряд`}
         topInset={insets.top}
         avatar={
@@ -67,7 +69,7 @@ export default function ProfileScreen() {
               accessibilityRole="button"
               accessibilityLabel="Изменить имя и аватар"
             >
-              <Avatar value={profile.avatar} size={72} name={profile.displayName} />
+              <Avatar value={avatar} size={72} name={displayName} />
               <View style={styles.avatarEdit}>
                 <Feather name="edit-2" size={12} color={palette.textDark} />
               </View>

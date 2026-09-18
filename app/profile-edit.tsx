@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { getProfile, updateProfile } from '@/core/db/repo';
+import { getProfile } from '@/core/db/repo';
 import { palette, radii, spacing } from '@/core/theme/tokens';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -29,12 +29,14 @@ import { AVATAR_PRESETS, presetAvatarValue } from '@/features/profile/avatars';
 import { pickAvatarPhoto } from '@/features/profile/photo';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
+import { useWalkStore } from '@/store/useWalkStore';
 
 const NAME_LIMIT = 24;
 
 export default function ProfileEditScreen() {
   const insets = useSafeAreaInsets();
   const profile = getProfile();
+  const saveIdentity = useWalkStore((s) => s.saveIdentity);
 
   const [name, setName] = useState(profile.displayName ?? '');
   const [avatar, setAvatar] = useState(profile.avatar);
@@ -75,8 +77,8 @@ export default function ProfileEditScreen() {
     setBusy(true);
     setMessage(null);
 
-    // Сначала база: имя должно сохраниться, даже если сети нет.
-    updateProfile({ displayName: trimmed.length > 0 ? trimmed : null, avatar });
+    // Сначала своё: имя должно сохраниться, даже если сети нет.
+    saveIdentity(trimmed.length > 0 ? trimmed : null, avatar);
 
     if (trimmed.length > 0 && isServerConfigured()) {
       const provider = createFriendsProvider(origin);
@@ -94,7 +96,7 @@ export default function ProfileEditScreen() {
 
     setBusy(false);
     router.back();
-  }, [avatar, name, origin.lat, origin.lng]);
+  }, [avatar, name, origin.lat, origin.lng, saveIdentity]);
 
   return (
     <View style={styles.root}>

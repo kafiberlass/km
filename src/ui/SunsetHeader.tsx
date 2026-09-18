@@ -9,12 +9,16 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { palette, radii, spacing, sunsetBands } from '@/core/theme/tokens';
+import { Avatar } from '@/features/profile/Avatar';
 
 interface Props {
   level: number;
+  /** Имя человека. null — ещё не представился, тогда в шапке звание. */
+  name: string | null;
+  /** Строка аватара из профиля: «preset:…» или «photo:…». */
+  avatar: string | null;
+  /** Звание по уровню — запасной вариант для верхней строки. */
   title: string;
-  xp: number;
-  xpRequired: number;
   streakDays: number;
   /**
    * Высота статус-бара. Отступ уходит внутрь шапки, а не наружу: полосы
@@ -27,9 +31,9 @@ interface Props {
 
 export function SunsetHeader({
   level,
+  name,
+  avatar,
   title,
-  xp,
-  xpRequired,
   streakDays,
   topInset = 0,
 }: Props) {
@@ -45,17 +49,15 @@ export function SunsetHeader({
       </View>
 
       <View style={[styles.content, { paddingTop: topInset + spacing.sm }]}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>КМ</Text>
-        </View>
+        {/* Свой аватар, а не буквы «КМ»: это экран человека, а не витрина
+            приложения. Имя тоже своё — звание ушло строкой ниже и в профиль. */}
+        <Avatar value={avatar} size={52} name={name} />
 
         <View style={styles.titleBlock}>
           <Text style={styles.title} numberOfLines={1}>
-            УР.{level} {title.toUpperCase()}
+            {(name ?? title).toUpperCase()}
           </Text>
-          <Text style={styles.subtitle}>
-            {xp} / {xpRequired} XP ДО УР.{level + 1}
-          </Text>
+          <Text style={styles.subtitle}>УРОВЕНЬ {level}</Text>
         </View>
 
         <View style={styles.streak}>
@@ -74,8 +76,8 @@ const SUN_BOTTOM = 10;
 /**
  * Высота шапки без статус-бара.
  *
- * Складывается из строки с уровнем (её высоту задаёт кружок «КМ» в 52
- * пункта плюс отступы) и места под солнце. Меньше нельзя: солнце начнёт
+ * Складывается из строки с именем (её высоту задаёт аватар в 52 пункта
+ * плюс отступы) и места под солнце. Меньше нельзя: солнце начнёт
  * налезать на текст, а в макете оно встаёт строго под ним.
  */
 const MIN_BODY_HEIGHT = 150;
@@ -119,17 +121,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
-  badge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: palette.parchmentBright,
-    borderWidth: 3,
-    borderColor: palette.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: { color: palette.textDark, fontWeight: '900', fontSize: 18, letterSpacing: 1 },
   titleBlock: { flex: 1 },
   title: {
     color: palette.textOnDark,

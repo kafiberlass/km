@@ -114,6 +114,10 @@ interface WalkState {
   streakDays: number;
   exploredCells: number;
 
+  /** Имя и аватар — их показывают сразу три экрана, поэтому живут здесь. */
+  displayName: string | null;
+  avatar: string | null;
+
   toast: ToastPayload | null;
 
   /** Что разрешил человек: от этого зависит, переживёт ли прогулка сворачивание. */
@@ -131,6 +135,8 @@ interface WalkState {
   /** Не пора ли закрыть прогулку: человек мог просто остановиться. */
   checkIdle: () => void;
   dismissToast: () => void;
+  /** Сохранить имя и аватар: и в базу, и во все экраны разом. */
+  saveIdentity: (name: string | null, avatar: string | null) => void;
   hydrate: () => void;
   /** Подхватить прогулку, которая шла до выгрузки приложения. */
   resume: () => void;
@@ -168,6 +174,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
   xp: 0,
   streakDays: 0,
   exploredCells: 0,
+  displayName: null,
+  avatar: null,
   toast: null,
   permission: null,
   background: false,
@@ -187,6 +195,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       level: profile.level,
       xp: profile.xp,
       streakDays: profile.streakDays,
+      displayName: profile.displayName,
+      avatar: profile.avatar,
       exploredCells: repo.countCells(),
       districts,
       districtsDone: completedCount(districts),
@@ -466,6 +476,14 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     // Прогулку, забытую со вчера, не продолжаем, а доводим до конца
     // обычным путём — с начислением опыта за пройденное.
     if (!isWalkResumable(active)) void get().stop();
+  },
+
+  saveIdentity: (name, avatar) => {
+    // Через store, а не прямой записью в базу: имя показывают карта,
+    // профиль и шапка, и все три должны увидеть его сразу, а не после
+    // следующего перерисовывания по другому поводу.
+    repo.updateProfile({ displayName: name, avatar });
+    set({ displayName: name, avatar });
   },
 
   dismissToast: () => set({ toast: null }),

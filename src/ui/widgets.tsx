@@ -15,7 +15,14 @@ import Animated, {
 
 import { palette, radii, spacing } from '@/core/theme/tokens';
 
-export function XpBar({ ratio }: { ratio: number }) {
+export function XpBar({
+  ratio,
+  label,
+}: {
+  ratio: number;
+  /** Подпись поверх полосы: цифры опыта переехали сюда из шапки. */
+  label?: string;
+}) {
   const width = useSharedValue(0);
 
   useEffect(() => {
@@ -34,6 +41,8 @@ export function XpBar({ ratio }: { ratio: number }) {
           ))}
         </View>
       </Animated.View>
+
+      {label != null && <Text style={styles.barLabel}>{label}</Text>}
     </View>
   );
 }
@@ -124,6 +133,18 @@ const styles = StyleSheet.create({
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,
     overflow: 'hidden',
+  },
+  // Подпись лежит поверх полосы по центру: отдельная строка под ней
+  // съела бы место у карты, ради которого шапку и ужимали.
+  barLabel: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: 4,
+    color: palette.textDark,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+    fontVariant: ['tabular-nums'],
   },
   barFill: {
     height: '100%',
