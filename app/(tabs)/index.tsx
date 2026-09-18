@@ -173,21 +173,23 @@ export default function MapScreen() {
 
           <Link href="/map-full" asChild>
             <Pressable
+              hitSlop={spacing.sm}
               style={({ pressed }) => [styles.expand, pressed && styles.locatePressed]}
               accessibilityRole="button"
               accessibilityLabel="Открыть карту во весь экран"
             >
-              <Feather name="maximize-2" size={20} color={palette.textDark} />
+              <Feather name="maximize-2" size={24} color={palette.textDark} />
             </Pressable>
           </Link>
 
           <Pressable
             onPress={() => void centerOnMe()}
+            hitSlop={spacing.sm}
             style={({ pressed }) => [styles.locate, pressed && styles.locatePressed]}
             accessibilityRole="button"
             accessibilityLabel="Вернуться к своей точке"
           >
-            <Feather name="navigation" size={20} color={palette.textDark} />
+            <Feather name="navigation" size={24} color={palette.textDark} />
           </Pressable>
 
           <View style={styles.overlayBottom} pointerEvents="box-none">
@@ -236,14 +238,17 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   // Над нижней панелью, у правого края: большой палец дотягивается,
-  // а кнопку прогулки не перекрывает.
+  // а строку состояния не перекрывает.
+  //
+  // 56 пунктов, а не 48: по прежней кнопке приходилось целиться, особенно
+  // на ходу. Плюс hitSlop — область нажатия ещё шире самой кнопки.
   locate: {
     position: 'absolute',
     right: spacing.md,
-    bottom: 96,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    bottom: 92,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 3,
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,
@@ -254,10 +259,10 @@ const styles = StyleSheet.create({
   expand: {
     position: 'absolute',
     right: spacing.md,
-    bottom: 152,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    bottom: 92 + 56 + spacing.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 3,
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,

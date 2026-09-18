@@ -220,6 +220,19 @@ export default function FriendsScreen() {
   );
 }
 
+/**
+ * Куда вести с карточки друга.
+ *
+ * Живая позиция, если он на прогулке; иначе последнее место, где он был.
+ * Возвращает null, когда показывать нечего, — и тогда карточка не нажимается
+ * вовсе, вместо того чтобы открыть карту неизвестно где.
+ */
+function friendTarget(friend: Friend): { lat: number; lng: number } | null {
+  if (friend.position) return { lat: friend.position.lat, lng: friend.position.lng };
+  const visit = friend.visits[0];
+  return visit ? { lat: visit.lat, lng: visit.lng } : null;
+}
+
 function FriendCard({
   friend,
   origin,
@@ -231,10 +244,27 @@ function FriendCard({
 }) {
   const position = friend.position;
   const fresh = position != null && isFresh(position);
+  const target = friendTarget(friend);
+
+  const open = () => {
+    if (!target) return;
+    router.push({
+      pathname: '/map-full',
+      params: { lng: String(target.lng), lat: String(target.lat), friend: friend.name },
+    });
+  };
 
   return (
     <View style={styles.card}>
-      <View style={styles.head}>
+      <Pressable
+        onPress={open}
+        disabled={target == null}
+        style={({ pressed }) => [styles.head, pressed && target != null && styles.headPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={
+          target ? `Показать ${friend.name} на карте` : `${friend.name} не делится позицией`
+        }
+      >
         <View style={[styles.avatar, { backgroundColor: friend.color }, !fresh && styles.dim]}>
           <Text style={styles.avatarText}>{friend.initials}</Text>
         </View>
@@ -254,6 +284,12 @@ function FriendCard({
             мгновенно, без чтения строки статуса. */}
         <View style={[styles.dot, fresh ? styles.dotLive : styles.dotStale]} />
 
+        {/* Стрелка вместо подписи «нажми сюда»: она же показывает,
+            что карточка ведёт дальше. */}
+        {target != null && (
+          <Feather name="chevron-right" size={18} color={palette.textMuted} />
+        )}
+
         <Pressable
           onPress={onRemove}
           hitSlop={spacing.sm}
@@ -263,7 +299,7 @@ function FriendCard({
         >
           <Feather name="trash-2" size={16} color={palette.textMuted} />
         </Pressable>
-      </View>
+      </Pressable>
 
       {friend.visits.length > 0 && (
         <View style={styles.visits}>
@@ -301,6 +337,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headPressed: { opacity: 0.7 },
   headBody: { flex: 1, gap: 2 },
   avatar: {
     width: 46,

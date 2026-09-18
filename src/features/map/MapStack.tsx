@@ -40,6 +40,12 @@ interface Props {
   tracking: boolean;
   /** Пустой массив = друзья скрыты. */
   friends: readonly Friend[];
+  /**
+   * Куда смотреть при открытии. По умолчанию — origin, но это разные вещи:
+   * origin — точка отсчёта геометрии тумана, и трогать её нельзя, а камеру
+   * иногда надо навести в другое место (например, на друга).
+   */
+  initialCenter?: [number, number];
   initialZoom?: number;
   onIdle?: (state: ViewStateChangeEvent) => void;
   /** HUD экрана: кнопки, чипы, тосты. */
@@ -47,7 +53,18 @@ interface Props {
 }
 
 export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
-  { camera, origin, geometry, myPoint, tracking, friends, initialZoom, onIdle, children },
+  {
+    camera,
+    origin,
+    geometry,
+    myPoint,
+    tracking,
+    friends,
+    initialCenter,
+    initialZoom,
+    onIdle,
+    children,
+  },
   ref,
 ) {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -90,7 +107,7 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
       <MapCanvas
         ref={ref}
         camera={camera}
-        initialCenter={[origin.lng, origin.lat]}
+        initialCenter={initialCenter ?? [origin.lng, origin.lat]}
         initialZoom={initialZoom}
         onLayoutSize={setSize}
         onIdle={handleIdle}

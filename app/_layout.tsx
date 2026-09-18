@@ -53,6 +53,9 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="dev" options={{ presentation: 'modal' }} />
           <Stack.Screen name="friends" options={{ presentation: 'modal' }} />
+          {/* Ачивки — не отдельная вкладка: разглядывать их каждый день
+              незачем, а место в панели стоит дорого. Открываются из профиля. */}
+          <Stack.Screen name="achievements" options={{ presentation: 'modal' }} />
           {/* Карта во весь экран: именно fullScreenModal, а не modal —
               иначе сверху осталась бы полоска предыдущего экрана, ради
               избавления от которой окно и заводилось. */}

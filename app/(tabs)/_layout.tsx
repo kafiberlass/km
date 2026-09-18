@@ -48,13 +48,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="achievements"
-        options={{
-          title: 'АЧИВКИ',
-          tabBarIcon: ({ color }) => <Feather name="award" size={20} color={color as string} />,
-        }}
-      />
-      <Tabs.Screen
         name="places"
         options={{
           title: 'МЕСТА',

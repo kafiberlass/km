@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { buildSnapshot, countCells, unlockedAchievements } from '@/core/db/repo';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
@@ -29,6 +30,7 @@ export default function AchievementsScreen() {
         title="Достижения"
         subtitle={`${unlocked.size} из ${ACHIEVEMENTS.length} открыто`}
         topInset={insets.top}
+        onClose={() => router.back()}
       />
 
       <ScrollView contentContainerStyle={styles.content}>

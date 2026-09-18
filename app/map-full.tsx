@@ -15,7 +15,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
 import { getProfile } from '@/core/db/repo';
@@ -27,6 +27,7 @@ import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { GLOBE_ZOOM_START } from '@/features/globe/projection';
 import { useFriends } from '@/features/friends';
 import { MapStack } from '@/features/map/MapStack';
+import { parseMapTarget } from '@/features/map/target';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { WalkStatus } from '@/features/tracking/WalkStatus';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
@@ -35,6 +36,14 @@ import { useWalkStore } from '@/store/useWalkStore';
 
 /** Тот же масштаб, что и у кнопки «к себе» на главном экране. */
 const CLOSE_ZOOM = 16;
+
+/**
+ * Масштаб, на котором открывается карта, наведённая на друга.
+ *
+ * Чуть дальше, чем «к себе»: важно не только где он, но и насколько
+ * это далеко от знакомых мест.
+ */
+const FRIEND_ZOOM = 15;
 
 /** Куда уводит кнопка с глобусом: дальше уже некуда, там планета. */
 const PLANET_ZOOM = 0;
@@ -50,6 +59,11 @@ const FLIGHT_BACK_MS = 1600;
 export default function FullMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  // Экран открывают и с карточки друга: тогда в параметрах приходит его
+  // позиция и имя, и карта сразу смотрит туда.
+  const params = useLocalSearchParams<{ lng?: string; lat?: string; friend?: string }>();
+  const target = parseMapTarget(params.lng, params.lat);
   const cameraRef = useRef<CameraRef>(null);
   const [showFriends, setShowFriends] = useState(true);
 
@@ -119,6 +133,8 @@ export default function FullMapScreen() {
         ref={cameraRef}
         camera={camera}
         origin={origin}
+        initialCenter={target ? [target.lng, target.lat] : undefined}
+        initialZoom={target ? FRIEND_ZOOM : undefined}
         geometry={geometry}
         myPoint={myPoint}
         tracking={tracking}
@@ -127,14 +143,21 @@ export default function FullMapScreen() {
         <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]} pointerEvents="box-none">
           <Pressable
             onPress={() => router.back()}
+            hitSlop={spacing.sm}
             style={({ pressed }) => [styles.round, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Закрыть карту"
           >
-            <Feather name="x" size={22} color={palette.textDark} />
+            <Feather name="x" size={24} color={palette.textDark} />
           </Pressable>
 
           <View style={styles.chips} pointerEvents="box-none">
+            {target && params.friend != null && (
+              <Chip
+                label={`ГДЕ ${params.friend.toUpperCase()}`}
+                icon={<Feather name="user" size={16} color={palette.textDark} />}
+              />
+            )}
             <Chip
               label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
               icon={<Feather name="map" size={16} color={palette.textDark} />}
@@ -155,15 +178,17 @@ export default function FullMapScreen() {
         <View style={[styles.side, { bottom: insets.bottom + 96 }]} pointerEvents="box-none">
           <Pressable
             onPress={togglePlanet}
+            hitSlop={spacing.sm}
             style={({ pressed }) => [styles.round, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Показать планету целиком"
           >
-            <Feather name="globe" size={20} color={palette.textDark} />
+            <Feather name="globe" size={24} color={palette.textDark} />
           </Pressable>
 
           <Pressable
             onPress={() => setShowFriends((value) => !value)}
+            hitSlop={spacing.sm}
             style={({ pressed }) => [
               styles.round,
               !showFriends && styles.roundOff,
@@ -181,11 +206,12 @@ export default function FullMapScreen() {
 
           <Pressable
             onPress={() => void centerOnMe()}
+            hitSlop={spacing.sm}
             style={({ pressed }) => [styles.round, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Вернуться к своей точке"
           >
-            <Feather name="navigation" size={20} color={palette.textDark} />
+            <Feather name="navigation" size={24} color={palette.textDark} />
           </Pressable>
         </View>
 
@@ -215,10 +241,11 @@ const styles = StyleSheet.create({
     right: spacing.md,
     gap: spacing.sm,
   },
+  // 56 пунктов: по кнопке в 48 приходилось целиться, особенно на ходу.
   round: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 3,
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,
