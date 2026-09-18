@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { LAND_RINGS } from '@/features/globe/land';
 import {
-  GLOBE_SCALE_START,
+  GLOBE_SCALE_FAR,
+  GLOBE_SCALE_NEAR,
   GLOBE_ZOOM_FULL,
   GLOBE_ZOOM_NONE,
   GLOBE_ZOOM_START,
@@ -100,16 +101,27 @@ describe('две фазы перехода', () => {
     expect(spaceOpacity(15)).toBe(0);
   });
 
-  it('шар подрастает от неполного размера до полного', () => {
-    expect(globeScale(GLOBE_ZOOM_START)).toBeCloseTo(GLOBE_SCALE_START, 6);
-    expect(globeScale(GLOBE_ZOOM_FULL)).toBeCloseTo(1, 6);
-
+  it('шар ведёт себя как предмет: ближе — крупнее', () => {
+    // Главное свойство: на всём диапазоне приближение только увеличивает
+    // планету. Обратное и выглядело как «лечу к ней, а она исчезает».
     let previous = 0;
-    for (let zoom = GLOBE_ZOOM_START; zoom >= GLOBE_ZOOM_FULL; zoom -= 0.1) {
+    for (let zoom = 0; zoom <= GLOBE_ZOOM_START; zoom += 0.05) {
       const value = globeScale(zoom);
       expect(value).toBeGreaterThanOrEqual(previous - 1e-9);
       previous = value;
     }
+  });
+
+  it('на краю отдаления Земля дальше всего, у границы с картой — ближе всего', () => {
+    expect(globeScale(0)).toBeCloseTo(GLOBE_SCALE_FAR, 6);
+    expect(globeScale(GLOBE_ZOOM_FULL)).toBeCloseTo(1, 6);
+    expect(globeScale(GLOBE_ZOOM_START)).toBeCloseTo(GLOBE_SCALE_NEAR, 6);
+    expect(GLOBE_SCALE_NEAR).toBeGreaterThan(1);
+  });
+
+  it('за границами диапазона масштаб не скачет', () => {
+    expect(globeScale(-1)).toBeCloseTo(GLOBE_SCALE_FAR, 6);
+    expect(globeScale(15)).toBeCloseTo(GLOBE_SCALE_NEAR, 6);
   });
 
   it('сглаживание зажато в границы и плавное на концах', () => {

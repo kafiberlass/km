@@ -49,8 +49,16 @@ export const SPACE_ZOOM_FULL = 3.9;
 export const GLOBE_ZOOM_START = 3.7;
 export const GLOBE_ZOOM_FULL = 2.5;
 
-/** Планета появляется не сразу во всю величину, а подрастает. */
-export const GLOBE_SCALE_START = 0.75;
+/**
+ * Размер планеты на двух концах: на самом краю отдаления и у границы
+ * с плоской картой.
+ *
+ * Шар обязан вести себя как предмет: приближаешь — становится крупнее,
+ * отдаляешь — мельче. Раньше он на приближении просто гас на месте,
+ * и это читалось как «планета исчезает, хотя я к ней лечу».
+ */
+export const GLOBE_SCALE_FAR = 0.72;
+export const GLOBE_SCALE_NEAR = 2.6;
 
 /** Сглаживание: у линейного проявления видно момент старта и остановки. */
 export function smoothstep(t: number): number {
@@ -77,10 +85,25 @@ export function globeOpacity(zoom: number): number {
   return rampDown(zoom, GLOBE_ZOOM_START, GLOBE_ZOOM_FULL);
 }
 
-/** Масштаб шара: подрастает вместе с проявлением. */
+/**
+ * Масштаб шара. Растёт вместе с зумом на всём диапазоне.
+ *
+ * Два участка. От края отдаления до «планета целиком» (0 -> 2.5) Земля
+ * подрастает с маленькой до своего нормального размера — это подлёт.
+ * Дальше (2.5 -> 3.7) она продолжает расти и одновременно растворяется,
+ * уступая место карте: то же самое чувство, что при входе в атмосферу.
+ */
 export function globeScale(zoom: number): number {
   'worklet';
-  return GLOBE_SCALE_START + (1 - GLOBE_SCALE_START) * globeOpacity(zoom);
+  if (zoom <= 0) return GLOBE_SCALE_FAR;
+  if (zoom >= GLOBE_ZOOM_START) return GLOBE_SCALE_NEAR;
+
+  if (zoom <= GLOBE_ZOOM_FULL) {
+    return GLOBE_SCALE_FAR + (1 - GLOBE_SCALE_FAR) * smoothstep(zoom / GLOBE_ZOOM_FULL);
+  }
+
+  const t = (zoom - GLOBE_ZOOM_FULL) / (GLOBE_ZOOM_START - GLOBE_ZOOM_FULL);
+  return 1 + (GLOBE_SCALE_NEAR - 1) * smoothstep(t);
 }
 
 /**
