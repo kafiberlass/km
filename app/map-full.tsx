@@ -10,7 +10,7 @@
  * прогулка, начатая здесь, продолжается там же и наоборот.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
@@ -18,7 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
-import { getProfile } from '@/core/db/repo';
+import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { palette, spacing } from '@/core/theme/tokens';
@@ -66,11 +66,13 @@ export default function FullMapScreen() {
   const target = parseMapTarget(params.lng, params.lat);
   const cameraRef = useRef<CameraRef>(null);
   const [showFriends, setShowFriends] = useState(true);
+  const [showPlaces, setShowPlaces] = useState(true);
 
   const status = useWalkStore((s) => s.status);
   const exploredCells = useWalkStore((s) => s.exploredCells);
   const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
+  const placesVersion = useWalkStore((s) => s.placesVersion);
   const liveSegment = useWalkStore((s) => s.liveSegment);
 
   const profile = getProfile();
@@ -89,6 +91,7 @@ export default function FullMapScreen() {
   const { geometry } = useFogGeometry(origin, geometryVersion, liveSegment);
   const coverage = useCoverage(origin, exploredCells);
   const friends = useFriends(origin, showFriends);
+  const places = useMemo(() => (showPlaces ? allPlaces() : []), [showPlaces, placesVersion]);
 
   const tracking = status === 'tracking' || status === 'starting';
 
@@ -139,6 +142,7 @@ export default function FullMapScreen() {
         myPoint={myPoint}
         tracking={tracking}
         friends={showFriends ? friends : []}
+        places={places}
       >
         <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]} pointerEvents="box-none">
           <Pressable
@@ -184,6 +188,24 @@ export default function FullMapScreen() {
             accessibilityLabel="Показать планету целиком"
           >
             <Feather name="globe" size={24} color={palette.textDark} />
+          </Pressable>
+
+          <Pressable
+            onPress={() => setShowPlaces((value) => !value)}
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [
+              styles.round,
+              !showPlaces && styles.roundOff,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={showPlaces ? 'Скрыть места' : 'Показать места'}
+          >
+            <Feather
+              name="map-pin"
+              size={24}
+              color={showPlaces ? palette.textDark : palette.textMuted}
+            />
           </Pressable>
 
           <Pressable

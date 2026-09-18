@@ -6,14 +6,14 @@
  * Карта и туман синхронизируются через SharedValue камеры, без setState.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 
-import { getProfile } from '@/core/db/repo';
+import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
@@ -43,6 +43,7 @@ const CLOSE_ZOOM = 16;
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [showFriends, setShowFriends] = useState(true);
+  const [showPlaces, setShowPlaces] = useState(true);
   const cameraRef = useRef<CameraRef>(null);
 
   const status = useWalkStore((s) => s.status);
@@ -54,6 +55,7 @@ export default function MapScreen() {
   const exploredCells = useWalkStore((s) => s.exploredCells);
   const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
+  const placesVersion = useWalkStore((s) => s.placesVersion);
   const liveSegment = useWalkStore((s) => s.liveSegment);
   const toast = useWalkStore((s) => s.toast);
   const dismissToast = useWalkStore((s) => s.dismissToast);
@@ -74,6 +76,10 @@ export default function MapScreen() {
   const { geometry } = useFogGeometry(origin, geometryVersion, liveSegment);
   const coverage = useCoverage(origin, exploredCells);
   const friends = useFriends(origin, showFriends);
+
+  // Читаются из базы заново, когда меняется их список: нашли новые
+  // через OSM, открыли очередное на прогулке, восстановили копию.
+  const places = useMemo(() => (showPlaces ? allPlaces() : []), [showPlaces, placesVersion]);
 
   const tracking = status === 'tracking' || status === 'starting';
 
@@ -132,6 +138,7 @@ export default function MapScreen() {
           myPoint={myPoint}
           tracking={tracking}
           friends={showFriends ? friends : []}
+          places={places}
         >
           <View style={styles.overlayTop} pointerEvents="box-none">
             <View style={styles.topLeft} pointerEvents="box-none">
@@ -156,6 +163,20 @@ export default function MapScreen() {
             </View>
 
             <View style={styles.topRight} pointerEvents="box-none">
+              <Pressable onPress={() => setShowPlaces((value) => !value)}>
+                <Chip
+                  label={showPlaces ? `МЕСТА ${places.length}` : 'МЕСТА ВЫКЛ'}
+                  icon={
+                    <Feather
+                      name="map-pin"
+                      size={16}
+                      color={showPlaces ? palette.textDark : palette.textMuted}
+                    />
+                  }
+                  style={showPlaces ? undefined : styles.chipOff}
+                />
+              </Pressable>
+
               <Pressable onPress={() => setShowFriends((value) => !value)}>
                 <Chip
                   label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}

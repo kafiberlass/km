@@ -6,23 +6,13 @@ import { Feather } from '@expo/vector-icons';
 import { allPlaces, getProfile, removeDemoPlaces, upsertPlaces } from '@/core/db/repo';
 import { haversineMeters } from '@/core/geo/mercator';
 import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { placeKind } from '@/features/places/kinds';
 import { fetchNearbyPlaces } from '@/features/places/nearby';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
 
 /** Цвет плитки закреплён за типом места — как в макете. */
-const KINDS: Record<
-  string,
-  { icon: keyof typeof Feather.glyphMap; color: string; label: string }
-> = {
-  cafe: { icon: 'coffee', color: palette.ember, label: 'Кафе' },
-  park: { icon: 'sun', color: palette.teal, label: 'Парк' },
-  viewpoint: { icon: 'eye', color: palette.rust, label: 'Достопримечательность' },
-};
-
-const FALLBACK_KIND = { icon: 'map-pin', color: palette.mulberry, label: 'Место' } as const;
-
 /** Метры до места: близкие — в метрах, дальние — в километрах. */
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters / 10) * 10} м`;
@@ -32,6 +22,8 @@ function formatDistance(meters: number): string {
 export default function PlacesScreen() {
   const insets = useSafeAreaInsets();
   const exploredCells = useWalkStore((s) => s.exploredCells);
+  const placesVersion = useWalkStore((s) => s.placesVersion);
+  const refreshPlaces = useWalkStore((s) => s.refreshPlaces);
 
   // version растёт после загрузки мест: список читается из базы, и без него
   // экран покажет старое содержимое, пока не перерисуется по другому поводу.
@@ -39,7 +31,7 @@ export default function PlacesScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const places = useMemo(() => allPlaces(), [exploredCells, version]);
+  const places = useMemo(() => allPlaces(), [exploredCells, version, placesVersion]);
 
   // Расстояние считаем от домашней точки: живой геолокации на этом экране
   // нет, а гонять её ради списка — лишний расход батареи.
@@ -66,6 +58,9 @@ export default function PlacesScreen() {
       // кроме демо-трека.
       removeDemoPlaces();
       setVersion((value) => value + 1);
+      // Движок держит неоткрытые места в памяти: без этого новые не начнут
+      // открываться до перезапуска приложения.
+      refreshPlaces();
       setMessage(`Нашёл ${result.places.length} мест в трёх километрах вокруг`);
     } else if (result.status === 'empty') {
       setMessage('Вокруг ничего не нашлось — редкий случай, но бывает за городом');
@@ -78,7 +73,7 @@ export default function PlacesScreen() {
     }
 
     setBusy(false);
-  }, [busy, origin?.lat, origin?.lng]);
+  }, [busy, origin?.lat, origin?.lng, refreshPlaces]);
 
   return (
     <View style={styles.root}>
@@ -106,7 +101,7 @@ export default function PlacesScreen() {
 
         {places.map((place) => {
           const discovered = place.discoveredAt != null;
-          const kind = KINDS[place.type] ?? FALLBACK_KIND;
+          const kind = placeKind(place.type);
           const distance =
             origin != null
               ? formatDistance(haversineMeters(origin, { lat: place.lat, lng: place.lng }))

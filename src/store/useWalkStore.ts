@@ -31,6 +31,7 @@ import {
   type GeoPoint,
 } from '@/core/geo/filter';
 import { isAfterSunset } from '@/core/geo/sun';
+import { reachedPlaces } from '@/features/places/discovery';
 import { restoreWalk } from '@/core/walk/restore';
 import { isWalkResumable } from '@/core/walk/session';
 import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
@@ -118,6 +119,9 @@ interface WalkState {
   displayName: string | null;
   avatar: string | null;
 
+  /** Растёт, когда меняется список мест: по нему карта перечитывает их из базы. */
+  placesVersion: number;
+
   toast: ToastPayload | null;
 
   /** Что разрешил человек: от этого зависит, переживёт ли прогулка сворачивание. */
@@ -137,6 +141,8 @@ interface WalkState {
   dismissToast: () => void;
   /** Сохранить имя и аватар: и в базу, и во все экраны разом. */
   saveIdentity: (name: string | null, avatar: string | null) => void;
+  /** Перечитать места: их список поменялся снаружи движка. */
+  refreshPlaces: () => void;
   hydrate: () => void;
   /** Подхватить прогулку, которая шла до выгрузки приложения. */
   resume: () => void;
@@ -152,6 +158,13 @@ let recent: GeoPoint[] = [];
 let idleTimer: ReturnType<typeof setInterval> | null = null;
 /** Время последней принятой точки: по нему определяется простой. */
 let lastAcceptedAt = 0;
+/**
+ * Неоткрытые места — в памяти, а не запросом на каждую точку.
+ *
+ * Их десятки, а точек за прогулку сотни: перебрать короткий список дешевле,
+ * чем ходить в базу, и заметно проще, чем изобретать пространственный индекс.
+ */
+let pendingPlaces: repo.PlaceRow[] = [];
 /** Признак «уже закрываем»: flush внутри stop может привести сюда повторно. */
 let stopping = false;
 /** Чем открыта текущая сессия: у фикстуры из дев-панели свой источник точек. */
@@ -176,6 +189,7 @@ export const useWalkStore = create<WalkState>((set, get) => ({
   exploredCells: 0,
   displayName: null,
   avatar: null,
+  placesVersion: 0,
   toast: null,
   permission: null,
   background: false,
@@ -190,6 +204,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     // Прогресс кварталов собирается из всей истории один раз при старте,
     // дальше поддерживается добавлением новых ячеек.
     const districts = countByDistrict(repo.allCells());
+
+    pendingPlaces = repo.allPlaces().filter((place) => place.discoveredAt == null);
 
     set({
       level: profile.level,
@@ -336,6 +352,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     // точке, если приложение в это время спало.
     lastAcceptedAt = point.timestamp;
 
+    discoverPlacesAt(point, sessionId, set, get);
+
     // Отправка живёт здесь, а не в хуке на экране: конвейер работает
     // и в фоне, поэтому метка едет за человеком с закрытым приложением.
     if (origin) publishIfNeeded(origin, point);
@@ -480,6 +498,13 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     if (!isWalkResumable(active)) void get().stop();
   },
 
+  refreshPlaces: () => {
+    // Зовётся после загрузки мест из OSM и после восстановления копии:
+    // список в памяти иначе останется от прошлой жизни приложения.
+    pendingPlaces = repo.allPlaces().filter((place) => place.discoveredAt == null);
+    set({ placesVersion: get().placesVersion + 1 });
+  },
+
   saveIdentity: (name, avatar) => {
     // Через store, а не прямой записью в базу: имя показывают карта,
     // профиль и шапка, и все три должны увидеть его сразу, а не после
@@ -544,6 +569,54 @@ function openWalk(
  * её условие, узнаёт об этом только после следующего выхода на улицу.
  * Пересчёт при старте закрывает этот разрыв: заслуженное приходит сразу.
  */
+/**
+ * Открыть места, до которых человек дошёл этой точкой.
+ *
+ * Механика была написана целиком — и таблица, и награда, и экран, — но
+ * её никто не вызывал: места нельзя было открыть в принципе. Здесь она
+ * наконец подключена к прогулке.
+ */
+function discoverPlacesAt(
+  point: GeoPoint,
+  sessionId: string,
+  set: (partial: Partial<WalkState>) => void,
+  get: () => WalkState,
+): void {
+  if (pendingPlaces.length === 0) return;
+
+  const reached = reachedPlaces(pendingPlaces, point);
+  if (reached.length === 0) return;
+
+  const opened: repo.PlaceRow[] = [];
+  for (const place of reached) {
+    if (!repo.discoverPlace(place.id, point.timestamp, sessionId)) continue;
+    repo.appendXpEvent('place-discovered', place.xpReward, place.id, sessionId);
+    opened.push(place);
+  }
+
+  if (opened.length === 0) return;
+
+  const openedIds = new Set(opened.map((place) => place.id));
+  pendingPlaces = pendingPlaces.filter((place) => !openedIds.has(place.id));
+
+  const profile = repo.getProfile();
+  const reward = opened.reduce((sum, place) => sum + place.xpReward, 0);
+  const next = applyXp({ level: profile.level, xp: profile.xp } satisfies LevelState, reward);
+  repo.updateProfile({ level: next.level, xp: next.xp });
+
+  const first = opened[0]!;
+  set({
+    level: next.level,
+    xp: next.xp,
+    placesVersion: get().placesVersion + 1,
+    toast: {
+      kind: 'place',
+      title: opened.length === 1 ? first.title : `Найдено мест: ${opened.length}`,
+      subtitle: `+${reward} XP`,
+    },
+  });
+}
+
 function catchUpAchievements(
   set: (partial: Partial<WalkState>) => void,
   get: () => WalkState,

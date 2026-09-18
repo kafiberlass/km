@@ -16,10 +16,12 @@ import type { LngLat } from '@/core/geo/mercator';
 import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
 import { useFogEnabled } from '@/features/fog/fogSetting';
 import type { FogGeometry } from '@/features/fog/geometry';
+import type { PlaceRow } from '@/core/db/repo';
 import type { Friend } from '@/features/friends/types';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
 import { PeopleLayer } from './PeopleLayer';
 import { GlobeOverlay } from '@/features/globe/GlobeOverlay';
+import { PlacesLayer } from '@/features/places/PlacesLayer';
 import { GLOBE_ZOOM_NONE } from '@/features/globe/projection';
 
 import { MapCanvas } from './MapCanvas';
@@ -40,6 +42,8 @@ interface Props {
   tracking: boolean;
   /** Пустой массив = друзья скрыты. */
   friends: readonly Friend[];
+  /** Интересные места. Пустой массив = скрыты. */
+  places?: readonly PlaceRow[];
   /**
    * Куда смотреть при открытии. По умолчанию — origin, но это разные вещи:
    * origin — точка отсчёта геометрии тумана, и трогать её нельзя, а камеру
@@ -60,6 +64,7 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
     myPoint,
     tracking,
     friends,
+    places = [],
     initialCenter,
     initialZoom,
     onIdle,
@@ -125,6 +130,19 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
         <FogLayer
           enabled={fogEnabled}
           geometry={geometry}
+          origin={origin}
+          camera={camera}
+          width={size.width}
+          height={size.height}
+        />
+      )}
+
+      {/* Интересные места — поверх тумана: место, которого не видно,
+          невозможно выбрать целью, непонятно, куда идти. Туманом остаётся
+          скрыто то, что вокруг него. */}
+      {ready && places.length > 0 && (
+        <PlacesLayer
+          places={places}
           origin={origin}
           camera={camera}
           width={size.width}
