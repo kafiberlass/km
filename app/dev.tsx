@@ -18,6 +18,7 @@ import { countCells } from '@/core/db/repo';
 import { DEFAULT_FILTER, filterTrack } from '@/core/geo/filter';
 import { parseGpx } from '@/core/geo/gpx';
 import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fogSetting, useFogEnabled } from '@/features/fog/fogSetting';
 import { MockTrackingProvider } from '@/features/tracking/mock';
 import { ActionButton, Stat } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -28,6 +29,7 @@ export default function DevScreen() {
   const insets = useSafeAreaInsets();
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const fogEnabled = useFogEnabled();
 
   const ingest = useWalkStore((s) => s.ingest);
   const start = useWalkStore((s) => s.start);
@@ -115,6 +117,18 @@ export default function DevScreen() {
         <Stat label="ОТСЕЯНО" value={String(rejectedPoints)} />
         <Stat label="КМ" value={(distanceM / 1000).toFixed(2)} />
       </View>
+
+      {/* Под туманом не видно ни карты, ни того, правильно ли легла тропа.
+          Переключатель действует сразу на обоих экранах с картой
+          и переживает перезапуск. */}
+      <ActionButton
+        label={fogEnabled ? 'ТУМАН: ВКЛЮЧЁН' : 'ТУМАН: ВЫКЛЮЧЕН'}
+        tone={fogEnabled ? 'primary' : 'ghost'}
+        onPress={() => {
+          const next = fogSetting.toggle();
+          append(next ? 'туман включён' : 'туман выключен');
+        }}
+      />
 
       <ActionButton label="DRY-RUN ФИЛЬТРА" tone="ghost" onPress={dryRun} />
       <ActionButton label="ПРОИГРАТЬ МГНОВЕННО" onPress={() => void playInstant()} disabled={busy} />

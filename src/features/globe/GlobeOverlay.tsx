@@ -165,7 +165,7 @@ export function GlobeOverlay({ camera, center, me, width, height }: Props) {
           <RadialGradient
             c={vec(view.cx - view.r * 0.25, view.cy - view.r * 0.3)}
             r={view.r * 1.3}
-            colors={['#00000000', '#00000000', '#000000B0']}
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
             positions={[0, 0.6, 1]}
           />
         </Circle>

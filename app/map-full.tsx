@@ -24,6 +24,7 @@ import { districtAt, progressOf } from '@/core/geo/districts';
 import { palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
+import { GLOBE_ZOOM_FULL } from '@/features/globe/projection';
 import { useFriends } from '@/features/friends';
 import { MapStack } from '@/features/map/MapStack';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -33,6 +34,9 @@ import { useWalkStore } from '@/store/useWalkStore';
 
 /** Тот же масштаб, что и у кнопки «к себе» на главном экране. */
 const CLOSE_ZOOM = 16;
+
+/** Куда уводит кнопка с глобусом: дальше уже некуда, там планета. */
+const PLANET_ZOOM = 0;
 
 export default function FullMapScreen() {
   const insets = useSafeAreaInsets();
@@ -85,6 +89,23 @@ export default function FullMapScreen() {
     cameraRef.current?.flyTo({ center: [target.lng, target.lat], zoom, duration: 700 });
   }, [camera, locate, myPoint]);
 
+  /**
+   * Кнопка «планета». Свести пальцы четырнадцать раз подряд, чтобы дойти
+   * от своего двора до орбиты, никто не станет — поэтому туда есть прямой
+   * рейс. Повторное нажатие возвращает обратно к себе.
+   */
+  const togglePlanet = useCallback(async () => {
+    if (camera.value.zoom <= GLOBE_ZOOM_FULL) {
+      await centerOnMe();
+      return;
+    }
+    cameraRef.current?.flyTo({
+      center: [myPoint.lng, myPoint.lat],
+      zoom: PLANET_ZOOM,
+      duration: 1400,
+    });
+  }, [camera, centerOnMe, myPoint]);
+
   const toggle = useCallback(() => {
     if (tracking) void stop();
     else void start();
@@ -130,6 +151,15 @@ export default function FullMapScreen() {
         </View>
 
         <View style={[styles.side, { bottom: insets.bottom + 96 }]} pointerEvents="box-none">
+          <Pressable
+            onPress={() => void togglePlanet()}
+            style={({ pressed }) => [styles.round, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Показать планету целиком"
+          >
+            <Feather name="globe" size={20} color={palette.textDark} />
+          </Pressable>
+
           <Pressable
             onPress={() => setShowFriends((value) => !value)}
             style={({ pressed }) => [

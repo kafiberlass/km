@@ -14,6 +14,7 @@ import type { CameraRef, ViewStateChangeEvent } from '@maplibre/maplibre-react-n
 
 import type { LngLat } from '@/core/geo/mercator';
 import { FogLayer, type SharedCamera } from '@/features/fog/FogLayer';
+import { useFogEnabled } from '@/features/fog/fogSetting';
 import type { FogGeometry } from '@/features/fog/geometry';
 import type { Friend } from '@/features/friends/types';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
@@ -50,6 +51,7 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
   ref,
 ) {
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const fogEnabled = useFogEnabled();
   const [globeNear, setGlobeNear] = useState(false);
   const [globeCenter, setGlobeCenter] = useState<LngLat>(origin);
 
@@ -93,6 +95,7 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
 
       {ready && (
         <FogLayer
+          enabled={fogEnabled}
           geometry={geometry}
           origin={origin}
           camera={camera}
