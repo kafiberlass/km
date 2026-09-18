@@ -362,6 +362,27 @@ export function placesInBox(
   return (res.rows as Record<string, unknown>[]).map(mapPlace);
 }
 
+/**
+ * Убрать демо-места.
+ *
+ * Они лежат в Москве, потому что оттуда родом демо-трек. Человеку в другом
+ * городе они не нужны вовсе, а как только найдены настоящие — просто мусор
+ * в списке. Найденные не трогаем: если человек успел до них дойти, отбирать
+ * открытое нечестно.
+ */
+export function removeDemoPlaces(): number {
+  const db = getRawDb();
+  const before = row<{ n: number }>(
+    db.executeSync("SELECT COUNT(*) AS n FROM places WHERE id LIKE 'demo-%'"),
+  );
+  db.executeSync(
+    `DELETE FROM places
+     WHERE id LIKE 'demo-%'
+       AND id NOT IN (SELECT place_id FROM place_discoveries)`,
+  );
+  return Number(before?.n ?? 0);
+}
+
 export function allPlaces(): PlaceRow[] {
   const res = getRawDb().executeSync(
     `SELECT p.*, d.discovered_at
