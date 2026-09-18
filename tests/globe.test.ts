@@ -6,6 +6,7 @@ import {
   GLOBE_ZOOM_FULL,
   GLOBE_ZOOM_NONE,
   GLOBE_ZOOM_START,
+  globeMarkers,
   globeOpacity,
   globeScale,
   graticule,
@@ -151,5 +152,29 @@ describe('данные суши', () => {
     const lines = graticule(30);
     expect(lines.length).toBe(12 + 5);
     for (const line of lines) expect(line.length % 2).toBe(0);
+  });
+});
+
+describe('метки на планете', () => {
+  const items = [
+    { id: 'рядом', position: { lng: 5, lat: 5 } },
+    { id: 'за горизонтом', position: { lng: 160, lat: 0 } },
+    { id: 'без позиции', position: null },
+  ];
+
+  it('рисуются только те, кто на видимой половине', () => {
+    const markers = globeMarkers(items, view, (item) => item.position);
+    expect(markers.map((marker) => marker.item.id)).toEqual(['рядом']);
+  });
+
+  it('метка попадает внутрь диска', () => {
+    const [marker] = globeMarkers(items, view, (item) => item.position);
+    const distance = Math.hypot(marker!.x - view.cx, marker!.y - view.cy);
+    expect(distance).toBeLessThan(view.r);
+  });
+
+  it('поворот планеты меняет состав видимых меток', () => {
+    const markers = globeMarkers(items, { ...view, lng0: 160 }, (item) => item.position);
+    expect(markers.map((marker) => marker.item.id)).toEqual(['за горизонтом']);
   });
 });

@@ -147,3 +147,37 @@ export function graticule(stepDeg = 30): number[][] {
 
   return lines;
 }
+
+export interface GlobeMarker<T> {
+  item: T;
+  x: number;
+  y: number;
+}
+
+/**
+ * Метки на видимой половине планеты.
+ *
+ * Отдельно от projectGlobe, потому что для меток «прижать к краю диска»
+ * — неправильный ответ: материк, уходящий за шар, продолжается там же,
+ * а человек, оказавшийся на другой стороне Земли, на краю диска
+ * не находится. Такие метки просто не рисуются.
+ */
+export function globeMarkers<T>(
+  items: readonly T[],
+  view: GlobeView,
+  at: (item: T) => { lng: number; lat: number } | null | undefined,
+): GlobeMarker<T>[] {
+  const markers: GlobeMarker<T>[] = [];
+
+  for (const item of items) {
+    const point = at(item);
+    if (!point) continue;
+
+    const projected = projectGlobe(point.lng, point.lat, view);
+    if (!projected.front) continue;
+
+    markers.push({ item, x: projected.x, y: projected.y });
+  }
+
+  return markers;
+}

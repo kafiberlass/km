@@ -35,9 +35,11 @@ import Animated, {
 import type { LngLat } from '@/core/geo/mercator';
 import { palette } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
+import { isFresh, type Friend } from '@/features/friends/types';
 
 import { LAND_RINGS } from './land';
 import {
+  globeMarkers,
   globeOpacity,
   globeScale,
   graticule,
@@ -55,13 +57,15 @@ interface Props {
   camera: SharedValue<SharedCamera>;
   /** Куда повёрнут шар — центр карты на момент последней остановки. */
   center: LngLat;
-  /** Своя точка: единственная метка, которая имеет смысл в масштабе планеты. */
+  /** Своя точка. */
   me: LngLat | null;
+  /** Друзья с известной позицией — на шаре видно, кто где на Земле. */
+  friends: readonly Friend[];
   width: number;
   height: number;
 }
 
-export function GlobeOverlay({ camera, center, me, width, height }: Props) {
+export function GlobeOverlay({ camera, center, me, friends, width, height }: Props) {
   // Целое число градусов: при панорамировании карты шар доворачивается
   // заметными шагами, но не пересобирается на каждый пиксель.
   const lng0 = Math.round(center.lng);
@@ -115,6 +119,14 @@ export function GlobeOverlay({ camera, center, me, width, height }: Props) {
   const stars = useMemo(() => buildStars(width, height, view), [width, height, view]);
 
   const here = useMemo(() => (me ? projectGlobe(me.lng, me.lat, view) : null), [me, view]);
+
+  // Друзья на обратной стороне Земли не рисуются вовсе: прижимать их
+  // к краю диска, как материки, значило бы показать человека там,
+  // где его нет.
+  const friendMarkers = useMemo(
+    () => globeMarkers(friends, view, (friend) => friend.position),
+    [friends, view],
+  );
 
   // Небо появляется первым и к началу проявления шара уже непрозрачно:
   // иначе сквозь материки просвечивают тайлы карты и две картинки
@@ -190,6 +202,18 @@ export function GlobeOverlay({ camera, center, me, width, height }: Props) {
               positions={[0, 0.6, 1]}
             />
           </Circle>
+
+          {friendMarkers.map(({ item, x, y }) => {
+            // Несвежая позиция гаснет — та же условность, что и на карте:
+            // «был здесь», а не «сейчас здесь».
+            const live = item.position != null && isFresh(item.position);
+            return (
+              <Group key={item.id}>
+                <Circle cx={x} cy={y} r={9} color={item.color} opacity={live ? 0.3 : 0.15} />
+                <Circle cx={x} cy={y} r={3.5} color={item.color} opacity={live ? 1 : 0.5} />
+              </Group>
+            );
+          })}
 
           {here?.front && (
             <Group>

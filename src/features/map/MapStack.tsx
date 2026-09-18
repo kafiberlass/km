@@ -147,13 +147,14 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
         />
       )}
 
-      {/* Планета кроет собой всё, включая туман и метки: с орбиты
-          тумана не видно. Своя точка на шаре остаётся. */}
+      {/* Планета кроет собой всё, включая туман: с орбиты его не видно.
+          Метки людей остаются — своя и друзей. */}
       {ready && globeNear && (
         <GlobeOverlay
           camera={camera}
           center={globeCenter}
           me={myPoint}
+          friends={friends}
           width={size.width}
           height={size.height}
         />
