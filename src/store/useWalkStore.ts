@@ -12,6 +12,8 @@
 
 import { create } from 'zustand';
 
+import { clearActiveWalk, loadActiveWalk, saveActiveWalk } from '@/core/db/activeWalk';
+import { drainInbox } from '@/core/db/inbox';
 import { insertCells, insertPoints } from '@/core/db/repo';
 import * as repo from '@/core/db/repo';
 import { CELL_RES, REVEAL_RADIUS_M, cellsAlongSegment, cellsAround } from '@/core/geo/coverage';
@@ -29,6 +31,8 @@ import {
   type GeoPoint,
 } from '@/core/geo/filter';
 import { isAfterSunset } from '@/core/geo/sun';
+import { restoreWalk } from '@/core/walk/restore';
+import { isWalkResumable } from '@/core/walk/session';
 import { evaluate, type AchievementDef } from '@/core/rules/achievements';
 import { deviceTimeZone, localDateKey, registerActivity } from '@/core/rules/streak';
 import {
@@ -39,7 +43,12 @@ import {
   xpForNewCells,
   type LevelState,
 } from '@/core/rules/xp';
-import { getProvider, type TrackingProvider, type TrackingStatus } from '@/features/tracking';
+import {
+  getProvider,
+  type PermissionLevel,
+  type TrackingProvider,
+  type TrackingStatus,
+} from '@/features/tracking';
 
 /** Точки копятся и пишутся пачками: транзакция на каждую точку убивает батарею. */
 const FLUSH_EVERY_POINTS = 10;
@@ -78,11 +87,18 @@ interface WalkState {
 
   toast: ToastPayload | null;
 
+  /** Что разрешил человек: от этого зависит, переживёт ли прогулка сворачивание. */
+  permission: PermissionLevel | null;
+  /** Идёт ли запись в фоне прямо сейчас. */
+  background: boolean;
+
   start: (options?: { source?: string }) => Promise<void>;
   stop: () => Promise<void>;
   ingest: (point: GeoPoint) => void;
   dismissToast: () => void;
   hydrate: () => void;
+  /** Подхватить прогулку, которая шла до выгрузки приложения. */
+  resume: () => void;
 }
 
 let filterState: FilterState = initialFilterState;
@@ -109,6 +125,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
   streakDays: 0,
   exploredCells: 0,
   toast: null,
+  permission: null,
+  background: false,
 
   hydrate: () => {
     const profile = repo.getProfile();
@@ -129,6 +147,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       districts,
       districtsDone: completedCount(districts),
     });
+
+    get().resume();
   },
 
   start: async ({ source = 'device' } = {}) => {
@@ -137,7 +157,7 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     provider = getProvider();
     const permission = await provider.requestPermissions();
     if (permission.level === 'denied') {
-      set({ status: 'error' });
+      set({ status: 'error', permission: 'denied' });
       return;
     }
 
@@ -159,20 +179,34 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       segmentIndex: 0,
     });
 
+    // Сессия создаётся ДО первой точки: фоновый провайдер начинает отдавать
+    // накопленное сразу из start(), и писать их было бы некуда.
+    // Ночная прогулка или нет — определится по первой точке.
+    repo.createSession(sessionId, startedAt, source, false);
+
+    // Запись переживает выгрузку приложения: iOS может убить процесс
+    // и поднять его заново только ради пачки координат — без этой строки
+    // проснувшееся приложение считает, что никто никуда не идёт.
+    saveActiveWalk({ sessionId, startedAt, source });
+
     unsubscribe = provider.subscribe((point) => get().ingest(point));
     await provider.start();
-    set({ status: 'tracking' });
-
-    // Сессия создаётся сразу, ночная она или нет — определится по первой точке.
-    repo.createSession(sessionId, startedAt, source, false);
+    set({
+      status: 'tracking',
+      permission: permission.level,
+      background: provider.isBackgroundActive?.() ?? false,
+    });
   },
 
   stop: async () => {
     const { sessionId, startedAt, distanceM, newCells } = get();
 
+    // Порядок важен: provider.stop() разбирает остаток фоновой очереди,
+    // и отписаться раньше — значит выбросить последние метры прогулки.
+    await provider?.stop().catch(() => undefined);
     unsubscribe?.();
     unsubscribe = null;
-    await provider?.stop().catch(() => undefined);
+    clearActiveWalk();
 
     if (sessionId) {
       flushPending(sessionId, get().segmentIndex);
@@ -188,7 +222,7 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       awardSessionXp(sessionId, distanceM, newCells, set, get);
     }
 
-    set({ status: 'idle', sessionId: null, liveSegment: [] });
+    set({ status: 'idle', sessionId: null, liveSegment: [], background: false });
   },
 
   ingest: (point) => {
@@ -255,6 +289,70 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     if (pendingPoints.length >= FLUSH_EVERY_POINTS) {
       flushPending(sessionId, get().segmentIndex);
     }
+  },
+
+  resume: () => {
+    // hydrate зовут и из дев-панели после сброса базы: повторное
+    // восстановление подписалось бы вторым слушателем на те же точки.
+    if (unsubscribe) return;
+
+    const active = loadActiveWalk();
+
+    if (!active) {
+      // Очередь могла остаться от прошлой жизни приложения: точки без
+      // прогулки некуда девать, а приписывать их следующей — врать.
+      try {
+        drainInbox();
+      } catch (error) {
+        console.warn('[walk] не удалось очистить очередь', error);
+      }
+      return;
+    }
+
+    const restored = restoreWalk(repo.sessionPoints(active.sessionId));
+
+    // Фильтр продолжает с последней записанной точки: если пауза вышла
+    // долгой, он сам порвёт трек — это его работа, а не наша.
+    filterState = { last: restored.last };
+    pendingPoints = [];
+
+    set({
+      status: 'tracking',
+      sessionId: active.sessionId,
+      startedAt: active.startedAt,
+      distanceM: restored.distanceM,
+      newCells: repo.countSessionCells(active.sessionId),
+      acceptedPoints: restored.points,
+      rejectedPoints: 0,
+      liveSegment: restored.liveSegment,
+      segmentIndex: restored.segmentIndex,
+      geometryVersion: get().geometryVersion + 1,
+    });
+
+    const resumed = getProvider();
+    provider = resumed;
+    unsubscribe = resumed.subscribe((point) => get().ingest(point));
+
+    // Точки, накопленные, пока приложения не было, прогоняются обычным
+    // конвейером: фильтр, H3, XP — всё как при живой прогулке.
+    try {
+      for (const point of drainInbox()) get().ingest(point);
+    } catch (error) {
+      console.warn('[walk] не удалось разобрать очередь', error);
+    }
+
+    void (async () => {
+      try {
+        await resumed.start();
+        set({ background: resumed.isBackgroundActive?.() ?? false });
+      } catch (error) {
+        console.warn('[walk] не удалось продолжить запись', error);
+      }
+
+      // Прогулку, забытую со вчера, не продолжаем, а доводим до конца
+      // обычным путём — с начислением опыта за пройденное.
+      if (!isWalkResumable(active)) await get().stop();
+    })();
   },
 
   dismissToast: () => set({ toast: null }),

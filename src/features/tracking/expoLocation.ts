@@ -14,8 +14,11 @@
  * которая бесплатна в debug-сборках и требует лицензию только для релиза.
  */
 
+import { AppState, type AppStateStatus } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+
+import { appendInboxPoints, drainInbox } from '@/core/db/inbox';
 
 import {
   DEFAULT_TRACKING_OPTIONS,
@@ -29,8 +32,14 @@ import {
 
 export const BACKGROUND_TASK = 'km-background-location';
 
-/** Мост между headless-таском и инстансом провайдера в JS-контексте приложения. */
-const backgroundEmitter = new Emitter<GeoPoint>();
+/**
+ * Сигнал «в очереди появились точки».
+ *
+ * Именно сигнал, а не сами координаты: таск может отработать в контексте,
+ * где приложения ещё нет и слушать некому. Точки он кладёт в базу,
+ * а разбирает их тот, кто жив.
+ */
+const inboxSignal = new Emitter<void>();
 
 function toGeoPoint(location: Location.LocationObject): GeoPoint {
   return {
@@ -53,9 +62,17 @@ TaskManager.defineTask(BACKGROUND_TASK, async ({ data, error }) => {
     return;
   }
   const locations = (data as { locations?: Location.LocationObject[] } | null)?.locations ?? [];
-  for (const location of locations) {
-    backgroundEmitter.emit(toGeoPoint(location));
+  if (locations.length === 0) return;
+
+  try {
+    // Сначала в базу — приложение могут выгрузить прямо на этой строке.
+    appendInboxPoints(locations.map(toGeoPoint));
+  } catch (err) {
+    console.warn('[tracking] не удалось записать фоновые точки', err);
+    return;
   }
+
+  inboxSignal.emit();
 });
 
 export class ExpoLocationProvider implements TrackingProvider {
@@ -66,10 +83,18 @@ export class ExpoLocationProvider implements TrackingProvider {
   private foregroundSub: Location.LocationSubscription | null = null;
   private pointEmitter = new Emitter<GeoPoint>();
   private statusEmitter = new Emitter<TrackingStatus>();
-  private unsubscribeBackground: (() => void) | null = null;
+  private unsubscribeInbox: (() => void) | null = null;
+  private appStateSub: { remove: () => void } | null = null;
+  private background = false;
+  private draining = false;
 
   getStatus(): TrackingStatus {
     return this.status;
+  }
+
+  /** Идёт ли запись при свёрнутом приложении, или только пока экран открыт. */
+  isBackgroundActive(): boolean {
+    return this.background;
   }
 
   async requestPermissions(): Promise<PermissionResult> {
@@ -78,8 +103,10 @@ export class ExpoLocationProvider implements TrackingProvider {
       return { level: 'denied', blocked: !foreground.canAskAgain };
     }
 
-    // «Always» запрашивается ОТДЕЛЬНО и осознанно поздно — после первой
-    // успешной прогулки. Спрошенное на онбординге даёт кратно меньше согласий.
+    // «Always» запрашивается ОТДЕЛЬНО: iOS сначала даёт «При использовании»,
+    // а потом, когда приложение действительно поработало в фоне, сам
+    // предлагает переключить. Спрошенное на онбординге даёт кратно
+    // меньше согласий.
     const background = await Location.requestBackgroundPermissionsAsync();
     return {
       level: background.status === 'granted' ? 'always' : 'when-in-use',
@@ -92,39 +119,29 @@ export class ExpoLocationProvider implements TrackingProvider {
     this.setStatus('starting');
 
     try {
-      this.foregroundSub = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.BestForNavigation,
-          distanceInterval: options.distanceFilterM,
-          timeInterval: 3000,
-        },
-        (location) => this.pointEmitter.emit(toGeoPoint(location)),
-      );
+      const permission = await Location.getBackgroundPermissionsAsync().catch(() => null);
+      const canBackground = options.background && permission?.status === 'granted';
 
-      if (options.background) {
-        this.unsubscribeBackground = backgroundEmitter.subscribe((point) =>
-          this.pointEmitter.emit(point),
-        );
+      if (canBackground) {
+        // Источник координат ровно один. Раньше рядом с фоновым таском
+        // работал ещё и watchPositionAsync, и каждая точка приходила
+        // дважды: половину съедал фильтр дрожания, остальные накручивали
+        // счётчик отсеянных и путали дев-панель.
+        await this.startBackgroundUpdates(options);
+        this.background = true;
 
-        const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK);
-        if (!alreadyRunning) {
-          await Location.startLocationUpdatesAsync(BACKGROUND_TASK, {
+        // Догоняем то, что накопилось, пока приложение было выгружено.
+        this.drainInboxNow();
+      } else {
+        this.foregroundSub = await Location.watchPositionAsync(
+          {
             accuracy: Location.Accuracy.BestForNavigation,
             distanceInterval: options.distanceFilterM,
-            // Копим точки пачками: каждое пробуждение JS стоит батареи.
-            deferredUpdatesInterval: 30_000,
-            deferredUpdatesDistance: 100,
-            pausesUpdatesAutomatically: false,
-            activityType: Location.ActivityType.Fitness,
-            showsBackgroundLocationIndicator: true,
-            foregroundService: {
-              notificationTitle: options.notificationTitle,
-              notificationBody: options.notificationBody,
-              notificationColor: '#E4713F',
-              killServiceOnDestroy: false,
-            },
-          });
-        }
+            timeInterval: 3000,
+          },
+          (location) => this.pointEmitter.emit(toGeoPoint(location)),
+        );
+        this.background = false;
       }
 
       this.setStatus('tracking');
@@ -136,15 +153,72 @@ export class ExpoLocationProvider implements TrackingProvider {
   }
 
   async stop(): Promise<void> {
+    // Сначала разбираем очередь: последние метры прогулки могли прийти
+    // за секунду до нажатия «завершить», и терять их обидно.
+    this.drainInboxNow();
+
     this.foregroundSub?.remove();
     this.foregroundSub = null;
-    this.unsubscribeBackground?.();
-    this.unsubscribeBackground = null;
+    this.unsubscribeInbox?.();
+    this.unsubscribeInbox = null;
+    this.appStateSub?.remove();
+    this.appStateSub = null;
+    this.background = false;
 
     if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK)) {
       await Location.stopLocationUpdatesAsync(BACKGROUND_TASK);
     }
     this.setStatus('idle');
+  }
+
+  private async startBackgroundUpdates(options: TrackingOptions): Promise<void> {
+    this.unsubscribeInbox = inboxSignal.subscribe(() => this.drainInboxNow());
+
+    // Пока приложение спало, сигнал мог прийти в никуда: подписка живёт
+    // в памяти, а её пересоздали при пробуждении. Возврат на экран —
+    // второй, независимый повод заглянуть в очередь.
+    this.appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') this.drainInboxNow();
+    });
+
+    if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK)) return;
+
+    await Location.startLocationUpdatesAsync(BACKGROUND_TASK, {
+      accuracy: Location.Accuracy.BestForNavigation,
+      distanceInterval: options.distanceFilterM,
+      // Копим точки пачками: каждое пробуждение JS стоит батареи. Но
+      // отложенные точки лежат в памяти нативного слоя, и если iOS убьёт
+      // приложение, буфер пропадёт вместе с ним — поэтому пачки небольшие.
+      // Условия действуют только в фоне: на открытом экране iOS отдаёт
+      // точки сразу, и тропа рисуется живой.
+      deferredUpdatesInterval: 20_000,
+      deferredUpdatesDistance: 50,
+      // iOS умеет «приостановить обновления, когда человек не двигается»
+      // и не включает их обратно, пока приложение не откроют. Для записи
+      // прогулки это тихая потеря второй половины пути.
+      pausesUpdatesAutomatically: false,
+      activityType: Location.ActivityType.Fitness,
+      showsBackgroundLocationIndicator: true,
+      foregroundService: {
+        notificationTitle: options.notificationTitle,
+        notificationBody: options.notificationBody,
+        notificationColor: '#E4713F',
+        killServiceOnDestroy: false,
+      },
+    });
+  }
+
+  /** Разбор очереди. Повторный вызов во время разбора игнорируется. */
+  private drainInboxNow(): void {
+    if (this.draining) return;
+    this.draining = true;
+    try {
+      for (const point of drainInbox()) this.pointEmitter.emit(point);
+    } catch (error) {
+      console.warn('[tracking] не удалось разобрать очередь точек', error);
+    } finally {
+      this.draining = false;
+    }
   }
 
   subscribe(listener: (point: GeoPoint) => void): () => void {

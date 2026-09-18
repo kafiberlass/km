@@ -25,6 +25,7 @@ import type { CameraRef } from '@maplibre/maplibre-react-native';
 
 import { getFlag, setFlag } from '@/core/db/kv';
 import { MapStack } from '@/features/map/MapStack';
+import { BackgroundNote } from '@/features/tracking/BackgroundNote';
 import { useAutoWalk } from '@/features/tracking/useAutoWalk';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -250,6 +251,7 @@ export default function MapScreen() {
                   {(distanceM / 1000).toFixed(2)} км · {stats.points} точек · сборка{' '}
                   {stats.buildMs} мс
                 </Text>
+                <BackgroundNote />
               </View>
             )}
 
@@ -334,6 +336,6 @@ const styles = StyleSheet.create({
     bottom: spacing.md,
     gap: spacing.sm,
   },
-  liveRow: { alignItems: 'center' },
+  liveRow: { alignItems: 'center', gap: 2 },
   liveText: { color: palette.parchment, fontSize: 12, fontVariant: ['tabular-nums'] },
 });

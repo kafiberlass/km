@@ -7,6 +7,7 @@
 import { getRawDb } from './client';
 import { PARENT_RES, parentOf, type Cell } from '../geo/coverage';
 import type { GeoPoint } from '../geo/filter';
+import type { StoredPoint } from '../walk/restore';
 import type { ProgressSnapshot } from '../rules/achievements';
 
 export interface ProfileRow {
@@ -241,6 +242,40 @@ export function loadTrackSegments(limitPoints = 200_000): TrackSegment[] {
   }
 
   return segments;
+}
+
+/**
+ * Точки одной сессии — для восстановления прогулки после перезапуска.
+ *
+ * Нужны с точностью и временем, в отличие от loadTrackSegments: их получит
+ * фильтр, которому важно, насколько приёмник себе верил и когда это было.
+ */
+export function sessionPoints(sessionId: string): StoredPoint[] {
+  const res = getRawDb().executeSync(
+    `SELECT segment, lat, lng, accuracy, recorded_at
+     FROM track_points WHERE session_id = ?
+     ORDER BY segment, recorded_at;`,
+    [sessionId],
+  );
+
+  return (
+    res.rows as { segment: number; lat: number; lng: number; accuracy: number; recorded_at: number }[]
+  ).map((row) => ({
+    segment: row.segment,
+    lat: row.lat,
+    lng: row.lng,
+    accuracy: row.accuracy,
+    timestamp: row.recorded_at,
+  }));
+}
+
+/** Сколько ячеек открыла эта прогулка — счётчик «новых» после перезапуска. */
+export function countSessionCells(sessionId: string): number {
+  const res = getRawDb().executeSync(
+    'SELECT COUNT(*) AS n FROM explored_cells WHERE session_id = ?;',
+    [sessionId],
+  );
+  return ((res.rows as { n: number }[])[0]?.n ?? 0) as number;
 }
 
 export function appendXpEvent(

@@ -28,6 +28,7 @@ import { GLOBE_ZOOM_START } from '@/features/globe/projection';
 import { useFriends } from '@/features/friends';
 import { MapStack } from '@/features/map/MapStack';
 import { DEMO_CENTER } from '@/features/places/seed';
+import { BackgroundNote } from '@/features/tracking/BackgroundNote';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { ActionButton, Chip } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -198,7 +199,10 @@ export default function FullMapScreen() {
 
         <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]} pointerEvents="box-none">
           {tracking && (
-            <Text style={styles.liveText}>{(distanceM / 1000).toFixed(2)} км за эту прогулку</Text>
+            <>
+              <Text style={styles.liveText}>{(distanceM / 1000).toFixed(2)} км за эту прогулку</Text>
+              <BackgroundNote />
+            </>
           )}
 
           <ActionButton

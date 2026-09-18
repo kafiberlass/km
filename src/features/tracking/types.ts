@@ -48,6 +48,11 @@ export interface TrackingProvider {
   readonly label: string;
 
   getStatus(): TrackingStatus;
+  /**
+   * Идёт ли запись при свёрнутом приложении. Не у всех реализаций есть
+   * фон (мок его не изображает), поэтому метод необязательный.
+   */
+  isBackgroundActive?(): boolean;
   requestPermissions(): Promise<PermissionResult>;
   start(options?: Partial<TrackingOptions>): Promise<void>;
   stop(): Promise<void>;

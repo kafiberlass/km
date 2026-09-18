@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 
 import { WALK_CHISTYE_PRUDY_GPX } from '../assets/fixtures/walkChistyePrudy';
 import { resetDatabase } from '@/core/db/client';
+import { countInbox } from '@/core/db/inbox';
 import { countCells } from '@/core/db/repo';
 import { DEFAULT_FILTER, filterTrack } from '@/core/geo/filter';
 import { parseGpx } from '@/core/geo/gpx';
@@ -128,6 +129,14 @@ export default function DevScreen() {
           const next = fogSetting.toggle();
           append(next ? 'туман включён' : 'туман выключен');
         }}
+      />
+
+      {/* Очередь фоновых точек: если фон работает, а карта стоит на месте,
+          смотреть надо сюда — либо точки не приходят, либо их не разбирают. */}
+      <ActionButton
+        label="ОЧЕРЕДЬ ФОНОВЫХ ТОЧЕК"
+        tone="ghost"
+        onPress={() => append(`в очереди точек: ${countInbox()}`)}
       />
 
       <ActionButton label="DRY-RUN ФИЛЬТРА" tone="ghost" onPress={dryRun} />
