@@ -5,6 +5,8 @@ import {
   AUTO_START_WINDOW_MS,
   AUTO_STOP_IDLE_MS,
   decideAutoWalk,
+  isIdleTooLong,
+  pointsSince,
   type AutoWalkState,
 } from '@/features/tracking/autoWalk';
 
@@ -84,5 +86,36 @@ describe('автостоп прогулки', () => {
     const state = first();
     const decision = decideAutoWalk(state, north(5), 90_000, true);
     expect(decision.action).toBeNull();
+  });
+});
+
+describe('конец прогулки без единой точки', () => {
+  // Человек сел в кафе: трекер молчит вместе с ним, и решать приходится
+  // по времени последнего движения, а не по потоку точек.
+  const lastMove = 1_700_000_000_000;
+
+  it('шесть минут без движения — прогулка закончилась', () => {
+    expect(isIdleTooLong(lastMove, lastMove + AUTO_STOP_IDLE_MS)).toBe(true);
+    expect(isIdleTooLong(lastMove, lastMove + AUTO_STOP_IDLE_MS - 1)).toBe(false);
+  });
+
+  it('только что открытая прогулка не закрывается сама', () => {
+    expect(isIdleTooLong(0, lastMove + 10 * AUTO_STOP_IDLE_MS)).toBe(false);
+  });
+});
+
+describe('добор пути от якоря', () => {
+  const buffer = [{ timestamp: 10 }, { timestamp: 20 }, { timestamp: 30 }];
+
+  it('берёт точки с момента якоря, включая его собственную', () => {
+    expect(pointsSince(buffer, 20)).toEqual([{ timestamp: 20 }, { timestamp: 30 }]);
+  });
+
+  it('якорь раньше буфера — берём всё, что помним', () => {
+    expect(pointsSince(buffer, 0)).toHaveLength(3);
+  });
+
+  it('якорь позже последней точки — брать нечего', () => {
+    expect(pointsSince(buffer, 999)).toEqual([]);
   });
 });

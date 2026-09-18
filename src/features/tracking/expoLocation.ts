@@ -21,11 +21,12 @@ import * as TaskManager from 'expo-task-manager';
 import { appendInboxPoints, drainInbox } from '@/core/db/inbox';
 
 import {
-  DEFAULT_TRACKING_OPTIONS,
+  IDLE_TRACKING_OPTIONS,
   Emitter,
   type GeoPoint,
   type PermissionResult,
   type TrackingOptions,
+  type TrackingMode,
   type TrackingProvider,
   type TrackingStatus,
 } from './types';
@@ -87,6 +88,7 @@ export class ExpoLocationProvider implements TrackingProvider {
   private appStateSub: { remove: () => void } | null = null;
   private background = false;
   private draining = false;
+  private mode: TrackingMode | null = null;
 
   getStatus(): TrackingStatus {
     return this.status;
@@ -95,6 +97,11 @@ export class ExpoLocationProvider implements TrackingProvider {
   /** Идёт ли запись при свёрнутом приложении, или только пока экран открыт. */
   isBackgroundActive(): boolean {
     return this.background;
+  }
+
+  /** Немедленно разобрать очередь — например, перед закрытием прогулки. */
+  flush(): void {
+    this.drainInboxNow();
   }
 
   async requestPermissions(): Promise<PermissionResult> {
@@ -115,7 +122,7 @@ export class ExpoLocationProvider implements TrackingProvider {
   }
 
   async start(partial: Partial<TrackingOptions> = {}): Promise<void> {
-    const options: TrackingOptions = { ...DEFAULT_TRACKING_OPTIONS, ...partial };
+    const options: TrackingOptions = { ...IDLE_TRACKING_OPTIONS, ...partial };
     this.setStatus('starting');
 
     try {
@@ -133,14 +140,20 @@ export class ExpoLocationProvider implements TrackingProvider {
         // Догоняем то, что накопилось, пока приложение было выгружено.
         this.drainInboxNow();
       } else {
+        // Без разрешения «Всегда» остаётся только слушать, пока экран
+        // открыт. Передачи те же: дежурный режим и здесь не должен
+        // держать приёмник на полной мощности.
+        const walking = options.mode === 'walk';
+        this.foregroundSub?.remove();
         this.foregroundSub = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.BestForNavigation,
+            accuracy: walking ? Location.Accuracy.BestForNavigation : Location.Accuracy.Balanced,
             distanceInterval: options.distanceFilterM,
-            timeInterval: 3000,
+            timeInterval: walking ? 3000 : 15_000,
           },
           (location) => this.pointEmitter.emit(toGeoPoint(location)),
         );
+        this.mode = options.mode;
         this.background = false;
       }
 
@@ -164,6 +177,7 @@ export class ExpoLocationProvider implements TrackingProvider {
     this.appStateSub?.remove();
     this.appStateSub = null;
     this.background = false;
+    this.mode = null;
 
     if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK)) {
       await Location.stopLocationUpdatesAsync(BACKGROUND_TASK);
@@ -172,27 +186,42 @@ export class ExpoLocationProvider implements TrackingProvider {
   }
 
   private async startBackgroundUpdates(options: TrackingOptions): Promise<void> {
-    this.unsubscribeInbox = inboxSignal.subscribe(() => this.drainInboxNow());
+    if (!this.unsubscribeInbox) {
+      this.unsubscribeInbox = inboxSignal.subscribe(() => this.drainInboxNow());
+    }
 
     // Пока приложение спало, сигнал мог прийти в никуда: подписка живёт
     // в памяти, а её пересоздали при пробуждении. Возврат на экран —
     // второй, независимый повод заглянуть в очередь.
-    this.appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state === 'active') this.drainInboxNow();
-    });
+    if (!this.appStateSub) {
+      this.appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
+        if (state === 'active') this.drainInboxNow();
+      });
+    }
 
-    if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK)) return;
+    const running = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK);
+    if (running) {
+      // Передача та же — ничего не трогаем: перезапуск обновлений сбрасывает
+      // накопленный нативным слоем буфер отложенных точек.
+      if (this.mode === options.mode) return;
+      await Location.stopLocationUpdatesAsync(BACKGROUND_TASK);
+    }
+    this.mode = options.mode;
+
+    const walking = options.mode === 'walk';
 
     await Location.startLocationUpdatesAsync(BACKGROUND_TASK, {
-      accuracy: Location.Accuracy.BestForNavigation,
+      // В дежурном режиме навигационная точность не нужна и стоит слишком
+      // дорого: там решается единственный вопрос — ушёл человек или нет.
+      accuracy: walking ? Location.Accuracy.BestForNavigation : Location.Accuracy.Balanced,
       distanceInterval: options.distanceFilterM,
       // Копим точки пачками: каждое пробуждение JS стоит батареи. Но
       // отложенные точки лежат в памяти нативного слоя, и если iOS убьёт
       // приложение, буфер пропадёт вместе с ним — поэтому пачки небольшие.
       // Условия действуют только в фоне: на открытом экране iOS отдаёт
       // точки сразу, и тропа рисуется живой.
-      deferredUpdatesInterval: 20_000,
-      deferredUpdatesDistance: 50,
+      deferredUpdatesInterval: walking ? 20_000 : 5 * 60_000,
+      deferredUpdatesDistance: walking ? 50 : 150,
       // iOS умеет «приостановить обновления, когда человек не двигается»
       // и не включает их обратно, пока приложение не откроют. Для записи
       // прогулки это тихая потеря второй половины пути.

@@ -33,6 +33,13 @@ import {
 import { isAfterSunset } from '@/core/geo/sun';
 import { restoreWalk } from '@/core/walk/restore';
 import { isWalkResumable } from '@/core/walk/session';
+import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
+import {
+  decideAutoWalk,
+  isIdleTooLong,
+  pointsSince,
+  type AutoWalkState,
+} from '@/features/tracking/autoWalk';
 import { evaluate, type AchievementDef } from '@/core/rules/achievements';
 import { deviceTimeZone, localDateKey, registerActivity } from '@/core/rules/streak';
 import {
@@ -44,6 +51,8 @@ import {
   type LevelState,
 } from '@/core/rules/xp';
 import {
+  IDLE_TRACKING_OPTIONS,
+  WALK_TRACKING_OPTIONS,
   getProvider,
   type PermissionLevel,
   type TrackingProvider,
@@ -52,6 +61,25 @@ import {
 
 /** Точки копятся и пишутся пачками: транзакция на каждую точку убивает батарею. */
 const FLUSH_EVERY_POINTS = 10;
+
+/**
+ * Как часто проверять, не закончилась ли прогулка.
+ *
+ * Точки приходят только при движении: человек сел в кафе — и трекер
+ * замолкает вместе с ним. Поэтому «шесть минут без движения» некому
+ * заметить изнутри потока точек, нужен отдельный тик. В фоне таймеры
+ * не идут, и там это же условие проверяется на следующей пришедшей точке.
+ */
+const IDLE_CHECK_MS = 60_000;
+
+/**
+ * Сколько последних дежурных точек помнить.
+ *
+ * Прогулка объявляется задним числом — когда человек уже ушёл от якоря
+ * на сотню метров. Эти первые сто метров тоже часть пути, и без буфера
+ * они бы просто не попали на карту.
+ */
+const RECENT_LIMIT = 40;
 
 export interface ToastPayload {
   kind: 'achievement' | 'level-up' | 'place';
@@ -95,6 +123,12 @@ interface WalkState {
   start: (options?: { source?: string }) => Promise<void>;
   stop: () => Promise<void>;
   ingest: (point: GeoPoint) => void;
+  /** Слушать геолокацию всё время: прогулку приложение объявляет само. */
+  watch: () => void;
+  /** Любая точка от трекера — и дежурная, и прогулочная. */
+  observe: (point: GeoPoint) => void;
+  /** Не пора ли закрыть прогулку: человек мог просто остановиться. */
+  checkIdle: () => void;
   dismissToast: () => void;
   hydrate: () => void;
   /** Подхватить прогулку, которая шла до выгрузки приложения. */
@@ -106,6 +140,15 @@ let pendingPoints: GeoPoint[] = [];
 let unsubscribe: (() => void) | null = null;
 let provider: TrackingProvider | null = null;
 let origin: { lat: number; lng: number } | null = null;
+let autoState: AutoWalkState | null = null;
+let recent: GeoPoint[] = [];
+let idleTimer: ReturnType<typeof setInterval> | null = null;
+/** Время последней принятой точки: по нему определяется простой. */
+let lastAcceptedAt = 0;
+/** Признак «уже закрываем»: flush внутри stop может привести сюда повторно. */
+let stopping = false;
+/** Чем открыта текущая сессия: у фикстуры из дев-панели свой источник точек. */
+let sessionSource = 'device';
 
 export const useWalkStore = create<WalkState>((set, get) => ({
   status: 'idle',
@@ -149,10 +192,11 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     });
 
     get().resume();
+    get().watch();
   },
 
   start: async ({ source = 'device' } = {}) => {
-    if (get().status === 'tracking') return;
+    if (get().sessionId) return;
 
     provider = getProvider();
     const permission = await provider.requestPermissions();
@@ -160,69 +204,58 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       set({ status: 'error', permission: 'denied' });
       return;
     }
+    set({ permission: permission.level });
 
-    const sessionId = `w-${Date.now().toString(36)}`;
-    const startedAt = Date.now();
-
-    filterState = initialFilterState;
-    pendingPoints = [];
-
-    set({
-      status: 'starting',
-      sessionId,
-      startedAt,
-      distanceM: 0,
-      newCells: 0,
-      acceptedPoints: 0,
-      rejectedPoints: 0,
-      liveSegment: [],
-      segmentIndex: 0,
-    });
-
-    // Сессия создаётся ДО первой точки: фоновый провайдер начинает отдавать
-    // накопленное сразу из start(), и писать их было бы некуда.
-    // Ночная прогулка или нет — определится по первой точке.
-    repo.createSession(sessionId, startedAt, source, false);
-
-    // Запись переживает выгрузку приложения: iOS может убить процесс
-    // и поднять его заново только ради пачки координат — без этой строки
-    // проснувшееся приложение считает, что никто никуда не идёт.
-    saveActiveWalk({ sessionId, startedAt, source });
-
-    unsubscribe = provider.subscribe((point) => get().ingest(point));
-    await provider.start();
-    set({
-      status: 'tracking',
-      permission: permission.level,
-      background: provider.isBackgroundActive?.() ?? false,
-    });
+    openWalk(source, Date.now(), set);
   },
 
   stop: async () => {
-    const { sessionId, startedAt, distanceM, newCells } = get();
+    const sessionId = get().sessionId;
+    if (!sessionId || stopping) return;
 
-    // Порядок важен: provider.stop() разбирает остаток фоновой очереди,
-    // и отписаться раньше — значит выбросить последние метры прогулки.
-    await provider?.stop().catch(() => undefined);
-    unsubscribe?.();
-    unsubscribe = null;
-    clearActiveWalk();
+    // Разбор очереди ниже может снова привести сюда: среди последних точек
+    // окажется пауза длиннее шести минут, и observe решит закрыть прогулку
+    // второй раз. Второе закрытие начислило бы опыт ещё раз.
+    stopping = true;
 
-    if (sessionId) {
-      flushPending(sessionId, get().segmentIndex);
+    // Последние метры прогулки могли прийти секунду назад и ещё лежать
+    // в фоновой очереди. Разбираем их, пока сессия открыта.
+    provider?.flush?.();
 
-      const endedAt = Date.now();
-      repo.finishSession(sessionId, {
-        endedAt,
-        distanceM,
-        durationS: startedAt ? Math.round((endedAt - startedAt) / 1000) : 0,
-        newCells,
-      });
+    const { startedAt, distanceM, newCells, segmentIndex } = get();
 
-      awardSessionXp(sessionId, distanceM, newCells, set, get);
-    }
-
+    // Признак прогулки снимаем сразу, до записи в базу: точки, которые
+    // придут за это время, не должны попасть в уже закрытую сессию.
     set({ status: 'idle', sessionId: null, liveSegment: [], background: false });
+
+    flushPending(sessionId, segmentIndex);
+
+    const endedAt = Date.now();
+    repo.finishSession(sessionId, {
+      endedAt,
+      distanceM,
+      durationS: startedAt ? Math.round((endedAt - startedAt) / 1000) : 0,
+      newCells,
+    });
+
+    awardSessionXp(sessionId, distanceM, newCells, set, get);
+
+    clearActiveWalk();
+    resetPublisher();
+    sessionSource = 'device';
+    lastAcceptedAt = 0;
+    // Детектор начинает с чистого листа: якорь от прошлой прогулки
+    // объявил бы следующую прямо на пороге дома.
+    autoState = null;
+    recent = [];
+
+    // Не выключаем геолокацию, а возвращаем дежурную передачу: следующую
+    // прогулку приложение должно заметить само.
+    void provider
+      ?.start(IDLE_TRACKING_OPTIONS)
+      .catch((error: unknown) => console.warn('[walk] дежурный режим не включился', error));
+
+    stopping = false;
   },
 
   ingest: (point) => {
@@ -286,35 +319,121 @@ export const useWalkStore = create<WalkState>((set, get) => ({
 
     if (closed.length > 0) awardDistricts(closed.length, sessionId, set, get);
 
+    // По этой отметке определяется простой — и в таймере, и на следующей
+    // точке, если приложение в это время спало.
+    lastAcceptedAt = point.timestamp;
+
+    // Отправка живёт здесь, а не в хуке на экране: конвейер работает
+    // и в фоне, поэтому метка едет за человеком с закрытым приложением.
+    if (origin) publishIfNeeded(origin, point);
+
     if (pendingPoints.length >= FLUSH_EVERY_POINTS) {
       flushPending(sessionId, get().segmentIndex);
     }
   },
 
-  resume: () => {
-    // hydrate зовут и из дев-панели после сброса базы: повторное
-    // восстановление подписалось бы вторым слушателем на те же точки.
+  watch: () => {
+    // Слушаем геолокацию всё время, пока живёт приложение: кнопки
+    // «начать прогулку» больше нет, и заметить её начало больше некому.
     if (unsubscribe) return;
 
+    const tracker = getProvider();
+    provider = tracker;
+    unsubscribe = tracker.subscribe((point) => get().observe(point));
+
+    if (!idleTimer) idleTimer = setInterval(() => get().checkIdle(), IDLE_CHECK_MS);
+
+    void (async () => {
+      const permission = await tracker.requestPermissions();
+      set({ permission: permission.level });
+      if (permission.level === 'denied') return;
+
+      try {
+        await tracker.start(get().sessionId ? WALK_TRACKING_OPTIONS : IDLE_TRACKING_OPTIONS);
+        set({ background: tracker.isBackgroundActive?.() ?? false });
+      } catch (error) {
+        console.warn('[walk] не удалось включить слежение', error);
+      }
+    })();
+  },
+
+  observe: (point) => {
+    const now = point.timestamp;
+
+    // Во время проигрывания фикстуры настоящая геолокация молчит: иначе
+    // в нарисованную прогулку попадёт точка из окна, где стоит телефон.
+    if (sessionSource === 'mock' && get().sessionId) return;
+
+    if (get().sessionId) {
+      // Простой обнаруживается на следующей точке: пока человек сидит,
+      // трекер молчит вместе с ним, и таймер в фоне тоже не идёт.
+      if (isIdleTooLong(lastAcceptedAt, now)) {
+        void get().stop();
+        autoState = { anchor: point, anchorAt: now, lastMoveAt: now };
+        recent = [point];
+        return;
+      }
+
+      get().ingest(point);
+
+      const decision = decideAutoWalk(autoState, point, now, true);
+      autoState = decision.state;
+      if (decision.action === 'stop') void get().stop();
+      return;
+    }
+
+    recent.push(point);
+    if (recent.length > RECENT_LIMIT) recent.shift();
+
+    // Якорь ДО решения: именно от него человек ушёл, и именно оттуда
+    // начинается прогулка, которую мы объявляем задним числом.
+    const anchorAt = autoState?.anchorAt ?? now;
+
+    const decision = decideAutoWalk(autoState, point, now, false);
+    autoState = decision.state;
+    if (decision.action !== 'start') return;
+
+    const buffered = pointsSince(recent, anchorAt);
+    openWalk('auto', buffered[0]?.timestamp ?? now, set);
+    for (const earlier of buffered) get().ingest(earlier);
+    recent = [];
+  },
+
+  checkIdle: () => {
+    if (!get().sessionId) return;
+    if (isIdleTooLong(lastAcceptedAt, Date.now())) void get().stop();
+  },
+
+  resume: () => {
     const active = loadActiveWalk();
 
     if (!active) {
-      // Очередь могла остаться от прошлой жизни приложения: точки без
-      // прогулки некуда девать, а приписывать их следующей — врать.
+      // Очереди без прогулки тоже есть что рассказать: пока приложения
+      // не было, дежурные точки копились, и по ним видно, что человек
+      // ушёл из дома. Прогулка объявится задним числом.
       try {
-        drainInbox();
+        for (const point of drainInbox()) get().observe(point);
       } catch (error) {
-        console.warn('[walk] не удалось очистить очередь', error);
+        console.warn('[walk] не удалось разобрать очередь', error);
       }
       return;
     }
 
+    sessionSource = active.source;
     const restored = restoreWalk(repo.sessionPoints(active.sessionId));
 
     // Фильтр продолжает с последней записанной точки: если пауза вышла
     // долгой, он сам порвёт трек — это его работа, а не наша.
     filterState = { last: restored.last };
     pendingPoints = [];
+    lastAcceptedAt = restored.last?.timestamp ?? 0;
+    autoState = restored.last
+      ? {
+          anchor: restored.last,
+          anchorAt: restored.last.timestamp,
+          lastMoveAt: restored.last.timestamp,
+        }
+      : null;
 
     set({
       status: 'tracking',
@@ -329,34 +448,67 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       geometryVersion: get().geometryVersion + 1,
     });
 
-    const resumed = getProvider();
-    provider = resumed;
-    unsubscribe = resumed.subscribe((point) => get().ingest(point));
-
-    // Точки, накопленные, пока приложения не было, прогоняются обычным
-    // конвейером: фильтр, H3, XP — всё как при живой прогулке.
+    // Точки, накопленные, пока приложения не было, идут обычным путём:
+    // observe сам решит, продолжается прогулка или между ними была пауза
+    // в полчаса и её пора закрывать.
     try {
-      for (const point of drainInbox()) get().ingest(point);
+      for (const point of drainInbox()) get().observe(point);
     } catch (error) {
       console.warn('[walk] не удалось разобрать очередь', error);
     }
 
-    void (async () => {
-      try {
-        await resumed.start();
-        set({ background: resumed.isBackgroundActive?.() ?? false });
-      } catch (error) {
-        console.warn('[walk] не удалось продолжить запись', error);
-      }
-
-      // Прогулку, забытую со вчера, не продолжаем, а доводим до конца
-      // обычным путём — с начислением опыта за пройденное.
-      if (!isWalkResumable(active)) await get().stop();
-    })();
+    // Прогулку, забытую со вчера, не продолжаем, а доводим до конца
+    // обычным путём — с начислением опыта за пройденное.
+    if (!isWalkResumable(active)) void get().stop();
   },
 
   dismissToast: () => set({ toast: null }),
 }));
+
+/**
+ * Открыть прогулку: и когда её объявил детектор, и когда её запустили руками
+ * из дев-панели. Один путь на оба случая — иначе они разъедутся в мелочах
+ * вроде «записали сессию, но забыли сбросить фильтр».
+ */
+function openWalk(
+  source: string,
+  startedAt: number,
+  set: (partial: Partial<WalkState>) => void,
+): void {
+  const sessionId = `w-${Date.now().toString(36)}`;
+
+  sessionSource = source;
+  filterState = initialFilterState;
+  pendingPoints = [];
+  lastAcceptedAt = 0;
+  resetPublisher();
+
+  set({
+    status: 'tracking',
+    sessionId,
+    startedAt,
+    distanceM: 0,
+    newCells: 0,
+    acceptedPoints: 0,
+    rejectedPoints: 0,
+    liveSegment: [],
+    segmentIndex: 0,
+  });
+
+  // Сессия создаётся ДО первой точки: писать их иначе некуда.
+  // Ночная она или нет — определится по первой точке.
+  repo.createSession(sessionId, startedAt, source, false);
+
+  // Запись переживает выгрузку приложения: iOS может убить процесс
+  // и поднять его заново только ради пачки координат.
+  saveActiveWalk({ sessionId, startedAt, source });
+
+  // Переключаем трекер на прогулочную передачу: точнее и чаще.
+  void provider
+    ?.start(WALK_TRACKING_OPTIONS)
+    .then(() => set({ background: provider?.isBackgroundActive?.() ?? false }))
+    .catch((error: unknown) => console.warn('[walk] не удалось поднять точность', error));
+}
 
 function flushPending(sessionId: string, segment: number): void {
   if (pendingPoints.length === 0) return;

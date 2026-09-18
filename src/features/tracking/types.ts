@@ -24,7 +24,23 @@ export interface PermissionResult {
   blocked: boolean;
 }
 
+/**
+ * Две передачи трекера.
+ *
+ * Кнопки «начать прогулку» больше нет: приложение само решает, когда
+ * человек пошёл. Значит, геолокация слушается всегда — а слушать её
+ * круглосуточно с навигационной точностью означает съесть батарею
+ * к обеду. Отсюда две передачи с разной ценой.
+ *
+ * `idle` — дежурный режим: грубая точность, редкие точки. Его задача
+ * одна: заметить, что человек ушёл от дома на сотню метров.
+ * `walk` — запись прогулки: максимальная точность, частые точки,
+ * из них рисуется тропа и считаются ячейки.
+ */
+export type TrackingMode = 'idle' | 'walk';
+
 export interface TrackingOptions {
+  mode: TrackingMode;
   /** Минимальное смещение между точками, метры. Главный рычаг батареи. */
   distanceFilterM: number;
   /** Нужны ли обновления при свёрнутом приложении. */
@@ -34,12 +50,27 @@ export interface TrackingOptions {
   notificationBody: string;
 }
 
-export const DEFAULT_TRACKING_OPTIONS: TrackingOptions = {
+export const WALK_TRACKING_OPTIONS: TrackingOptions = {
+  mode: 'walk',
   distanceFilterM: 15,
   background: true,
   notificationTitle: 'КМ записывает прогулку',
   notificationBody: 'Карта открывается по мере движения',
 };
+
+/**
+ * Дежурный режим. 60 метров и грубая точность — этого хватает порогу
+ * в 120 метров из autoWalk.ts и не заставляет приёмник работать всё время.
+ */
+export const IDLE_TRACKING_OPTIONS: TrackingOptions = {
+  mode: 'idle',
+  distanceFilterM: 60,
+  background: true,
+  notificationTitle: 'КМ ждёт прогулку',
+  notificationBody: 'Запись включится сама, когда вы пойдёте',
+};
+
+export const DEFAULT_TRACKING_OPTIONS = WALK_TRACKING_OPTIONS;
 
 export interface TrackingProvider {
   /** Идентификатор для логов и дев-панели. */
@@ -53,6 +84,8 @@ export interface TrackingProvider {
    * фон (мок его не изображает), поэтому метод необязательный.
    */
   isBackgroundActive?(): boolean;
+  /** Немедленно отдать накопленное в фоне — перед закрытием прогулки. */
+  flush?(): void;
   requestPermissions(): Promise<PermissionResult>;
   start(options?: Partial<TrackingOptions>): Promise<void>;
   stop(): Promise<void>;

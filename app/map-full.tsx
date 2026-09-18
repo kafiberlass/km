@@ -28,9 +28,9 @@ import { GLOBE_ZOOM_START } from '@/features/globe/projection';
 import { useFriends } from '@/features/friends';
 import { MapStack } from '@/features/map/MapStack';
 import { DEMO_CENTER } from '@/features/places/seed';
-import { BackgroundNote } from '@/features/tracking/BackgroundNote';
+import { WalkStatus } from '@/features/tracking/WalkStatus';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
-import { ActionButton, Chip } from '@/ui/widgets';
+import { Chip } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
 
 /** Тот же масштаб, что и у кнопки «к себе» на главном экране. */
@@ -58,9 +58,6 @@ export default function FullMapScreen() {
   const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
   const liveSegment = useWalkStore((s) => s.liveSegment);
-  const distanceM = useWalkStore((s) => s.distanceM);
-  const start = useWalkStore((s) => s.start);
-  const stop = useWalkStore((s) => s.stop);
 
   const profile = getProfile();
   const origin =
@@ -115,11 +112,6 @@ export default function FullMapScreen() {
       duration: onPlanet ? FLIGHT_BACK_MS : FLIGHT_TO_PLANET_MS,
     });
   }, [camera, myPoint]);
-
-  const toggle = useCallback(() => {
-    if (tracking) void stop();
-    else void start();
-  }, [start, stop, tracking]);
 
   return (
     <View style={styles.root}>
@@ -198,18 +190,7 @@ export default function FullMapScreen() {
         </View>
 
         <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]} pointerEvents="box-none">
-          {tracking && (
-            <>
-              <Text style={styles.liveText}>{(distanceM / 1000).toFixed(2)} км за эту прогулку</Text>
-              <BackgroundNote />
-            </>
-          )}
-
-          <ActionButton
-            label={tracking ? 'ЗАВЕРШИТЬ ПРОГУЛКУ' : 'НАЧАТЬ ПРОГУЛКУ'}
-            onPress={toggle}
-            tone={tracking ? 'ghost' : 'primary'}
-          />
+          <WalkStatus />
         </View>
       </MapStack>
     </View>

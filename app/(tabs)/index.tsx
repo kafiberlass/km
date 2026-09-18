@@ -20,16 +20,14 @@ import { levelXpRequirement } from '@/core/rules/xp';
 import { palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
-import { useFriends, usePublishPosition } from '@/features/friends';
+import { useFriends } from '@/features/friends';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
-import { getFlag, setFlag } from '@/core/db/kv';
 import { MapStack } from '@/features/map/MapStack';
-import { BackgroundNote } from '@/features/tracking/BackgroundNote';
-import { useAutoWalk } from '@/features/tracking/useAutoWalk';
+import { WalkStatus } from '@/features/tracking/WalkStatus';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { DEMO_CENTER } from '@/features/places/seed';
-import { ActionButton, Chip, Toast, XpBar } from '@/ui/widgets';
+import { Chip, Toast, XpBar } from '@/ui/widgets';
 import { SunsetHeader } from '@/ui/SunsetHeader';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -47,10 +45,6 @@ export default function MapScreen() {
   const [showFriends, setShowFriends] = useState(true);
   const cameraRef = useRef<CameraRef>(null);
 
-  // Настройка живёт в базе: человек включил автоопределение один раз,
-  // а не заново после каждого перезапуска.
-  const [autoWalk, setAutoWalk] = useState(() => getFlag('auto-walk', false));
-
   const status = useWalkStore((s) => s.status);
   const level = useWalkStore((s) => s.level);
   const xp = useWalkStore((s) => s.xp);
@@ -59,11 +53,8 @@ export default function MapScreen() {
   const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
   const liveSegment = useWalkStore((s) => s.liveSegment);
-  const distanceM = useWalkStore((s) => s.distanceM);
   const toast = useWalkStore((s) => s.toast);
   const dismissToast = useWalkStore((s) => s.dismissToast);
-  const start = useWalkStore((s) => s.start);
-  const stop = useWalkStore((s) => s.stop);
 
   const profile = getProfile();
   const origin =
@@ -78,16 +69,15 @@ export default function MapScreen() {
     bearing: 0,
   });
 
-  const { geometry, stats } = useFogGeometry(origin, geometryVersion, liveSegment);
+  const { geometry } = useFogGeometry(origin, geometryVersion, liveSegment);
   const coverage = useCoverage(origin, exploredCells);
   const friends = useFriends(origin, showFriends);
 
   const tracking = status === 'tracking' || status === 'starting';
 
-  // Делимся позицией только на прогулке: круглосуточная трансляция —
-  // другая фича и другой разговор про приватность.
+  // Позиция уходит друзьям из самого конвейера точек (store.ingest):
+  // так метка едет за человеком и при свёрнутом приложении.
   const livePoint = liveSegment.length > 0 ? liveSegment[liveSegment.length - 1]! : null;
-  usePublishPosition(origin, livePoint, tracking);
 
   // Где я сам. На прогулке — свежая точка трека, до неё — последняя
   // известная системе, а если и её нет, то точка отсчёта: лучше показать
@@ -112,32 +102,6 @@ export default function MapScreen() {
     const zoom = Math.max(camera.value.zoom, CLOSE_ZOOM);
     cameraRef.current?.flyTo({ center: [target.lng, target.lat], zoom, duration: 700 });
   }, [camera, locate, myPoint]);
-
-  const toggleAutoWalk = useCallback(() => {
-    setAutoWalk((value) => {
-      const next = !value;
-      setFlag('auto-walk', next);
-      return next;
-    });
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (tracking) void stop();
-    else void start();
-  }, [start, stop, tracking]);
-
-  // Автоопределение зовёт те же start и stop, что и кнопка: ручной
-  // и автоматический путь не должны расходиться в поведении.
-  useAutoWalk(
-    autoWalk,
-    tracking,
-    useCallback(() => {
-      void start();
-    }, [start]),
-    useCallback(() => {
-      void stop();
-    }, [stop]),
-  );
 
   return (
     <View style={styles.root}>
@@ -187,20 +151,6 @@ export default function MapScreen() {
             </View>
 
             <View style={styles.topRight} pointerEvents="box-none">
-              <Pressable onPress={toggleAutoWalk}>
-                <Chip
-                  label={autoWalk ? 'АВТО ВКЛ' : 'АВТО ВЫКЛ'}
-                  icon={
-                    <Feather
-                      name="activity"
-                      size={16}
-                      color={autoWalk ? palette.textDark : palette.textMuted}
-                    />
-                  }
-                  style={autoWalk ? undefined : styles.chipOff}
-                />
-              </Pressable>
-
               <Pressable onPress={() => setShowFriends((value) => !value)}>
                 <Chip
                   label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}
@@ -245,21 +195,7 @@ export default function MapScreen() {
               <Toast title={toast.title} subtitle={toast.subtitle} onDismiss={dismissToast} />
             )}
 
-            {tracking && (
-              <View style={styles.liveRow}>
-                <Text style={styles.liveText}>
-                  {(distanceM / 1000).toFixed(2)} км · {stats.points} точек · сборка{' '}
-                  {stats.buildMs} мс
-                </Text>
-                <BackgroundNote />
-              </View>
-            )}
-
-            <ActionButton
-              label={tracking ? 'ЗАВЕРШИТЬ ПРОГУЛКУ' : 'НАЧАТЬ ПРОГУЛКУ'}
-              onPress={toggle}
-              tone={tracking ? 'ghost' : 'primary'}
-            />
+            <WalkStatus />
           </View>
         </MapStack>
       </View>

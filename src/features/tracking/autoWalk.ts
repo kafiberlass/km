@@ -91,3 +91,34 @@ export function decideAutoWalk(
 
   return { action: null, state: previous };
 }
+
+/**
+ * Закончилась ли прогулка сама собой.
+ *
+ * Отдельно от decideAutoWalk, потому что проверять это приходится там,
+ * где точек нет вовсе: человек сел в кафе, трекер замолчал вместе с ним,
+ * и «шесть минут без движения» некому заметить изнутри потока точек.
+ * Ноль означает «движения ещё не было» — прогулку только что открыли.
+ */
+export function isIdleTooLong(
+  lastMoveAt: number,
+  now: number,
+  limitMs: number = AUTO_STOP_IDLE_MS,
+): boolean {
+  if (lastMoveAt <= 0) return false;
+  return now - lastMoveAt >= limitMs;
+}
+
+/**
+ * Точки, с которых начинается прогулка, объявленная задним числом.
+ *
+ * Прогулка становится очевидной, только когда человек уже ушёл от якоря
+ * на сотню метров. Эти сто метров — тоже часть пути, и брать их надо
+ * от якоря, а не от момента объявления.
+ */
+export function pointsSince<T extends { timestamp: number }>(
+  buffer: readonly T[],
+  since: number,
+): T[] {
+  return buffer.filter((point) => point.timestamp >= since);
+}
