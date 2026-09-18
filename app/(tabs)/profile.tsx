@@ -128,6 +128,14 @@ export default function ProfileScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/history" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="clock" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>ИСТОРИЯ ПРОГУЛОК</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
+
         <Link href="/friends" asChild>
           <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
             <Feather name="users" size={18} color={palette.textDark} />

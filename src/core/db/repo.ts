@@ -8,6 +8,7 @@ import { getRawDb } from './client';
 import { PARENT_RES, parentOf, type Cell } from '../geo/coverage';
 import type { GeoPoint } from '../geo/filter';
 import { completedCount, countByDistrict } from '../geo/districts';
+import type { WalkRow } from '../walk/history';
 import type { StoredPoint } from '../walk/restore';
 import type { ProgressSnapshot } from '../rules/achievements';
 
@@ -370,6 +371,43 @@ export function placesInBox(
  * в списке. Найденные не трогаем: если человек успел до них дойти, отбирать
  * открытое нечестно.
  */
+/**
+ * Завершённые прогулки, свежие сверху.
+ *
+ * Фикстуры из дев-панели не показываем: человек их не ходил, и в истории
+ * они выглядели бы как чужие километры.
+ */
+export function listWalks(limit = 500): WalkRow[] {
+  const res = getRawDb().executeSync(
+    `SELECT id, started_at, ended_at, distance_m, duration_s, new_cells, is_night
+     FROM walk_sessions
+     WHERE ended_at IS NOT NULL AND source != 'mock'
+     ORDER BY started_at DESC
+     LIMIT ?`,
+    [limit],
+  );
+
+  return (
+    res.rows as {
+      id: string;
+      started_at: number;
+      ended_at: number | null;
+      distance_m: number;
+      duration_s: number;
+      new_cells: number;
+      is_night: number;
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    startedAt: Number(row.started_at),
+    endedAt: row.ended_at == null ? null : Number(row.ended_at),
+    distanceM: Number(row.distance_m),
+    durationS: Number(row.duration_s),
+    newCells: Number(row.new_cells),
+    isNight: row.is_night === 1,
+  }));
+}
+
 export function removeDemoPlaces(): number {
   const db = getRawDb();
   const before = row<{ n: number }>(
