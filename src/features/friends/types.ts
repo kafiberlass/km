@@ -63,6 +63,8 @@ export interface FriendsProvider {
   linkByCode?(code: string): Promise<void>;
   /** Разорвать дружбу. Обе стороны перестают видеть друг друга. */
   removeFriend?(friendId: string): Promise<void>;
+  /** Имя, под которым человека видят друзья. */
+  setDisplayName?(name: string): Promise<void>;
 }
 
 /** Считается ли позиция актуальной. Старую метку показываем приглушённой. */

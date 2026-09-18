@@ -218,6 +218,26 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     if (error) console.warn('[friends] позиция не ушла', error.message);
   }
 
+  /**
+   * Имя, под которым тебя видят друзья.
+   *
+   * Локального имени им не видно: они читают строку из общей таблицы,
+   * поэтому смена имени обязана доходить до сервера, иначе у брата
+   * ты навсегда останешься «Другом».
+   */
+  async setDisplayName(name: string): Promise<void> {
+    const userId = await this.ensureSession();
+    if (!userId) return;
+
+    const { error } = await this.client
+      .from('profiles')
+      .update({ display_name: name })
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+    this.refresh();
+  }
+
   /** Код, который диктуют другу. */
   async inviteCode(): Promise<string | null> {
     const userId = await this.ensureSession();
@@ -279,12 +299,6 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     this.refresh();
   }
 
-  /** Имя, которое увидят друзья. */
-  async setDisplayName(name: string): Promise<void> {
-    const userId = await this.ensureSession();
-    if (!userId) return;
-    await this.client.from('profiles').update({ display_name: name }).eq('id', userId);
-  }
 }
 
 export function createSupabaseProvider(): SupabaseFriendsProvider | null {

@@ -16,7 +16,7 @@ import { Link } from 'expo-router';
 import { getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
-import { levelXpRequirement } from '@/core/rules/xp';
+import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
@@ -107,7 +107,7 @@ export default function MapScreen() {
     <View style={styles.root}>
       <SunsetHeader
         level={level}
-        title="Ночной бродяга"
+        title={levelTitle(level)}
         xp={xp}
         xpRequired={levelXpRequirement(level)}
         streakDays={streakDays}

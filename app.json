@@ -47,6 +47,12 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Чтобы поставить свою фотографию на аватар."
+        }
+      ],
+      [
         "expo-splash-screen",
         { "backgroundColor": "#2E1F17", "resizeMode": "contain" }
       ]

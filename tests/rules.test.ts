@@ -12,23 +12,43 @@ import {
   localDateKey,
   registerActivity,
 } from '@/core/rules/streak';
-import { applyXp, levelProgress, levelXpRequirement, totalXp } from '@/core/rules/xp';
+import { BADGES } from '@/ui/badges';
+import {
+  MAX_LEVEL,
+  applyXp,
+  levelProgress,
+  levelTitle,
+  levelXpRequirement,
+  totalXp,
+  totalXpForLevel,
+} from '@/core/rules/xp';
 
 describe('xp', () => {
-  it('формула совпадает с макетом: на 12 уровне до 13-го нужно 3000', () => {
-    expect(levelXpRequirement(12)).toBe(3000);
+  it('требование растёт с каждым уровнем', () => {
+    for (let level = 1; level < MAX_LEVEL - 1; level += 1) {
+      expect(levelXpRequirement(level + 1)).toBeGreaterThan(levelXpRequirement(level));
+    }
   });
 
-  it('прогресс из макета — 2340/3000', () => {
-    const progress = levelProgress({ level: 12, xp: 2340 });
-    expect(progress.required).toBe(3000);
-    expect(progress.ratio).toBeCloseTo(0.78, 5);
+  it('темп подобран под живую прогулку', () => {
+    // Около 250 XP приносит активный день: километры, новые ячейки,
+    // квартал и бонус за первый выход. Проверяем не числа формулы,
+    // а обещание, ради которого она такая.
+    const days = (level: number) => totalXpForLevel(level) / 250;
+
+    expect(days(10)).toBeGreaterThan(3);
+    expect(days(10)).toBeLessThan(14);
+    expect(days(50)).toBeGreaterThan(120);
+    expect(days(50)).toBeLessThan(300);
+    expect(days(MAX_LEVEL)).toBeGreaterThan(500);
+    expect(days(MAX_LEVEL)).toBeLessThan(1200);
   });
 
   it('уровень поднимается, остаток переносится', () => {
-    const result = applyXp({ level: 12, xp: 2340 }, 800);
+    const required = levelXpRequirement(12);
+    const result = applyXp({ level: 12, xp: required - 100 }, 140);
     expect(result.level).toBe(13);
-    expect(result.xp).toBe(140);
+    expect(result.xp).toBe(40);
     expect(result.levelUps).toBe(1);
   });
 
@@ -36,6 +56,19 @@ describe('xp', () => {
     const result = applyXp({ level: 1, xp: 0 }, 10_000);
     expect(result.levelUps).toBeGreaterThan(1);
     expect(result.xp).toBeLessThan(levelXpRequirement(result.level));
+  });
+
+  it('выше сотого не растём, и полоса на потолке полная', () => {
+    const result = applyXp({ level: 1, xp: 0 }, 10_000_000);
+    expect(result.level).toBe(MAX_LEVEL);
+    expect(result.xp).toBe(levelXpRequirement(MAX_LEVEL));
+    expect(levelProgress(result).ratio).toBe(1);
+
+    // Дальнейшие начисления ничего не ломают и не переполняют полосу.
+    const more = applyXp(result, 5_000);
+    expect(more.level).toBe(MAX_LEVEL);
+    expect(more.levelUps).toBe(0);
+    expect(levelProgress(more).ratio).toBe(1);
   });
 
   it('отрицательное и нулевое начисление ничего не меняет', () => {
@@ -47,6 +80,23 @@ describe('xp', () => {
   it('totalXp обратим относительно applyXp', () => {
     const grown = applyXp({ level: 1, xp: 0 }, 7_777);
     expect(totalXp(grown)).toBe(7_777);
+  });
+
+  it('у каждого уровня есть звание, и оно не мельтешит', () => {
+    const titles = new Set<string>();
+    let previous = levelTitle(1);
+
+    for (let level = 1; level <= MAX_LEVEL; level += 1) {
+      const title = levelTitle(level);
+      expect(title.length).toBeGreaterThan(0);
+      titles.add(title);
+      previous = title;
+    }
+
+    expect(previous).toBe(levelTitle(MAX_LEVEL));
+    expect(titles.size).toBeGreaterThanOrEqual(10);
+    expect(titles.size).toBeLessThanOrEqual(20);
+    expect(levelTitle(1)).not.toBe(levelTitle(MAX_LEVEL));
   });
 });
 
@@ -141,5 +191,44 @@ describe('achievements', () => {
   it('коды ачивок уникальны — иначе backfill выдаст дубли', () => {
     const codes = ACHIEVEMENTS.map((a) => a.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe('набор ачивок', () => {
+  it('коды уникальны', () => {
+    const codes = ACHIEVEMENTS.map((a) => a.code);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  it('у каждой есть название, описание, награда и достижимая цель', () => {
+    for (const def of ACHIEVEMENTS) {
+      expect(def.title.length).toBeGreaterThan(0);
+      expect(def.description.length).toBeGreaterThan(0);
+      expect(def.xpReward).toBeGreaterThan(0);
+
+      const { target } = def.progress(EMPTY_SNAPSHOT);
+      expect(target).toBeGreaterThan(0);
+    }
+  });
+
+  it('на пустом прогрессе не открыта ни одна', () => {
+    for (const def of ACHIEVEMENTS) {
+      expect(isUnlocked(def, EMPTY_SNAPSHOT)).toBe(false);
+    }
+  });
+
+  it('у каждой есть свой значок, а не запасной', () => {
+    for (const def of ACHIEVEMENTS) {
+      expect(BADGES[def.code], `нет значка для ${def.code}`).toBeDefined();
+    }
+  });
+
+  it('длинных целей больше, чем однодневных: игре есть куда расти', () => {
+    // Ачивка «на один вечер» — та, что открывается первой прогулкой.
+    const oneEvening = ACHIEVEMENTS.filter(
+      (def) => def.progress({ ...EMPTY_SNAPSHOT, totalWalks: 1, totalDistanceM: 3000 }).current >=
+        def.progress(EMPTY_SNAPSHOT).target,
+    );
+    expect(ACHIEVEMENTS.length - oneEvening.length).toBeGreaterThan(20);
   });
 });

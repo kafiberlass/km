@@ -18,11 +18,11 @@ import { useFogEnabled } from '@/features/fog/fogSetting';
 import type { FogGeometry } from '@/features/fog/geometry';
 import type { Friend } from '@/features/friends/types';
 import { FriendsLayer } from '@/features/friends/FriendsLayer';
+import { PeopleLayer } from './PeopleLayer';
 import { GlobeOverlay } from '@/features/globe/GlobeOverlay';
 import { GLOBE_ZOOM_NONE } from '@/features/globe/projection';
 
 import { MapCanvas } from './MapCanvas';
-import { SelfMarker } from './SelfMarker';
 
 /**
  * Запас над порогом появления планеты, на котором канвас глобуса уже
@@ -132,19 +132,7 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
         />
       )}
 
-      {ready && (
-        <SelfMarker
-          point={myPoint}
-          origin={origin}
-          camera={camera}
-          width={size.width}
-          height={size.height}
-          active={tracking}
-        />
-      )}
-
-      {/* Друзья рисуются НАД туманом: иначе метка исчезает ровно там,
-          где ты ещё не гулял, — то есть почти везде. */}
+      {/* Места друзей — под людьми: метка человека важнее подписи кафе. */}
       {ready && friends.length > 0 && (
         <FriendsLayer
           friends={friends}
@@ -152,6 +140,21 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
           camera={camera}
           width={size.width}
           height={size.height}
+        />
+      )}
+
+      {/* Люди — своей меткой и друзьями — рисуются НАД туманом: иначе они
+          исчезают ровно там, где ещё не гулял, то есть почти везде.
+          И одним слоем: слипшиеся метки разводит только тот, кто видит всех. */}
+      {ready && (
+        <PeopleLayer
+          me={myPoint}
+          friends={friends}
+          origin={origin}
+          camera={camera}
+          width={size.width}
+          height={size.height}
+          tracking={tracking}
         />
       )}
 

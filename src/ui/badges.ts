@@ -28,6 +28,23 @@ export const BADGES: Record<string, Badge> = {
   'explorer-10': { icon: 'compass', color: palette.mulberry },
   'explorer-50': { icon: 'map', color: palette.mulberry },
   'places-10': { icon: 'coffee', color: palette.ember },
+  'places-25': { icon: 'coffee', color: palette.mulberry },
+
+  'walks-10': { icon: 'sunrise', color: palette.gold },
+  'walks-50': { icon: 'sun', color: palette.gold },
+  'walks-100': { icon: 'star', color: palette.gold },
+  'active-days-50': { icon: 'calendar', color: palette.teal },
+  'streak-100': { icon: 'zap', color: palette.emberDeep },
+  'night-25': { icon: 'moon', color: palette.plum },
+  'distance-500k': { icon: 'activity', color: palette.teal },
+  'distance-1000k': { icon: 'award', color: palette.tealBright },
+  'long-walk-25': { icon: 'trending-up', color: palette.gold },
+  'district-1': { icon: 'grid', color: palette.teal },
+  'district-10': { icon: 'grid', color: palette.tealBright },
+  'district-50': { icon: 'layers', color: palette.mulberry },
+  'cells-1000': { icon: 'hexagon', color: palette.ember },
+  'cells-10000': { icon: 'hexagon', color: palette.emberDeep },
+  'explorer-100': { icon: 'map', color: palette.rust },
 };
 
 export const FALLBACK_BADGE: Badge = { icon: 'award', color: palette.ember };

@@ -22,6 +22,8 @@ export interface ProgressSnapshot {
   homeRegionRatio: number;
   /** Разных календарных дней с прогулками. */
   activeDays: number;
+  /** Кварталов закрыто целиком. */
+  districtsDone: number;
 }
 
 export const EMPTY_SNAPSHOT: ProgressSnapshot = {
@@ -35,6 +37,7 @@ export const EMPTY_SNAPSHOT: ProgressSnapshot = {
   longestWalkM: 0,
   homeRegionRatio: 0,
   activeDays: 0,
+  districtsDone: 0,
 };
 
 export interface AchievementDef {
@@ -120,6 +123,122 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     description: 'Найти 10 мест',
     xpReward: 200,
     progress: counter('discoveredPlaces', 10),
+  },
+
+  // ---- Дальше — длинная часть игры. Пороги расставлены так, чтобы
+  // следующая цель всегда была видна, но не дотягивалась за один вечер.
+
+  {
+    code: 'walks-10',
+    title: 'Вошло в привычку',
+    description: '10 прогулок',
+    xpReward: 100,
+    progress: counter('totalWalks', 10),
+  },
+  {
+    code: 'walks-50',
+    title: 'Завсегдатай',
+    description: '50 прогулок',
+    xpReward: 300,
+    progress: counter('totalWalks', 50),
+  },
+  {
+    code: 'walks-100',
+    title: 'Сто выходов',
+    description: '100 прогулок',
+    xpReward: 700,
+    progress: counter('totalWalks', 100),
+  },
+  {
+    code: 'active-days-50',
+    title: 'Полсотни дней',
+    description: '50 разных дней с прогулками',
+    xpReward: 400,
+    progress: counter('activeDays', 50),
+  },
+  {
+    code: 'streak-100',
+    title: 'Сто дней подряд',
+    description: '100 дней без пропусков',
+    xpReward: 2500,
+    progress: counter('bestStreakDays', 100),
+  },
+  {
+    code: 'night-25',
+    title: 'Полуночник',
+    description: '25 прогулок после заката',
+    xpReward: 500,
+    progress: counter('nightWalks', 25),
+  },
+  {
+    code: 'distance-500k',
+    title: 'Полтысячи',
+    description: '500 км суммарно',
+    xpReward: 1500,
+    progress: (s) => ({ current: s.totalDistanceM, target: 500_000 }),
+  },
+  {
+    code: 'distance-1000k',
+    title: 'Тысяча',
+    description: '1000 км суммарно',
+    xpReward: 3000,
+    progress: (s) => ({ current: s.totalDistanceM, target: 1_000_000 }),
+  },
+  {
+    code: 'long-walk-25',
+    title: 'Долгий день',
+    description: 'Одна прогулка длиннее 25 км',
+    xpReward: 800,
+    progress: (s) => ({ current: s.longestWalkM, target: 25_000 }),
+  },
+  {
+    code: 'district-1',
+    title: 'Свой квартал',
+    description: 'Закрыть первый квартал целиком',
+    xpReward: 100,
+    progress: counter('districtsDone', 1),
+  },
+  {
+    code: 'district-10',
+    title: 'Десять кварталов',
+    description: 'Закрыть 10 кварталов',
+    xpReward: 400,
+    progress: counter('districtsDone', 10),
+  },
+  {
+    code: 'district-50',
+    title: 'Полсотни кварталов',
+    description: 'Закрыть 50 кварталов',
+    xpReward: 1200,
+    progress: counter('districtsDone', 50),
+  },
+  {
+    code: 'cells-1000',
+    title: 'Тысяча клеток',
+    description: 'Открыть 1000 клеток тумана',
+    xpReward: 300,
+    progress: counter('exploredCells', 1000),
+  },
+  {
+    code: 'cells-10000',
+    title: 'Десять тысяч',
+    description: 'Открыть 10 000 клеток тумана',
+    xpReward: 1000,
+    progress: counter('exploredCells', 10_000),
+  },
+  {
+    code: 'places-25',
+    title: 'Знаток мест',
+    description: 'Найти 25 мест',
+    xpReward: 500,
+    progress: counter('discoveredPlaces', 25),
+  },
+  {
+    code: 'explorer-100',
+    title: 'Весь район',
+    description: 'Открыть домашний район целиком',
+    xpReward: 3000,
+    progress: (s) => ({ current: Math.round(s.homeRegionRatio * 1000), target: 1000 }),
   },
 ] as const;
 

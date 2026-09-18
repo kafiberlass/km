@@ -56,6 +56,7 @@ export default function RootLayout() {
           {/* Ачивки — не отдельная вкладка: разглядывать их каждый день
               незачем, а место в панели стоит дорого. Открываются из профиля. */}
           <Stack.Screen name="achievements" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="profile-edit" options={{ presentation: 'modal' }} />
           {/* Карта во весь экран: именно fullScreenModal, а не modal —
               иначе сверху осталась бы полоска предыдущего экрана, ради
               избавления от которой окно и заводилось. */}

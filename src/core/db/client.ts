@@ -141,6 +141,19 @@ export function getDb() {
   return ormDb;
 }
 
+/**
+ * Колонки, добавленные к уже существующим таблицам.
+ *
+ * Отдельно от MIGRATIONS, потому что миграции выполняются при каждом
+ * запуске и обязаны быть идемпотентными, а `ALTER TABLE ADD COLUMN`
+ * в SQLite не умеет `IF NOT EXISTS` и на втором запуске падает.
+ * Поэтому наличие колонки проверяется по схеме.
+ */
+const ADDED_COLUMNS: readonly { table: string; column: string; ddl: string }[] = [
+  { table: 'profile', column: 'display_name', ddl: 'TEXT' },
+  { table: 'profile', column: 'avatar', ddl: 'TEXT' },
+];
+
 export function migrate(): void {
   const db = getRawDb();
   db.executeSync('BEGIN');
@@ -148,6 +161,13 @@ export function migrate(): void {
     for (const statement of MIGRATIONS) {
       db.executeSync(statement);
     }
+
+    for (const { table, column, ddl } of ADDED_COLUMNS) {
+      const info = db.executeSync(`PRAGMA table_info(${table});`);
+      const exists = (info.rows as { name: string }[]).some((row) => row.name === column);
+      if (!exists) db.executeSync(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl};`);
+    }
+
     db.executeSync('COMMIT');
   } catch (error) {
     db.executeSync('ROLLBACK');

@@ -1,9 +1,12 @@
 /**
- * Метки друзей и их мест поверх карты.
+ * Места, где друзья бывали, поверх карты.
+ *
+ * Сами люди — в PeopleLayer: их метки приходится разводить, когда они
+ * попадают в одну точку, а сделать это может только слой, который видит
+ * всех сразу. Места разводить незачем, они и так стоят где стоят.
  *
  * Почему React, а не аннотации MapLibre: туман рисуется слоем Skia поверх
- * карты, и всё, что живёт внутри карты, оказывается под ним. Друзей надо
- * видеть всегда — иначе метка пропадает ровно там, где ещё не гулял.
+ * карты, и всё, что живёт внутри карты, оказывается под ним.
  *
  * Чтобы метки не отставали от карты, позиция считается тем же воркетом,
  * что и матрица тумана: камера лежит в SharedValue, пересчёт идёт на
@@ -24,9 +27,8 @@ import {
 import { palette, radii, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 
-import { isFresh, type Friend, type FriendVisit } from './types';
+import type { Friend, FriendVisit } from './types';
 
-const AVATAR = 40;
 const VISIT = 30;
 
 const VISIT_ICONS: Record<FriendVisit['type'], keyof typeof Feather.glyphMap> = {
@@ -71,29 +73,6 @@ export function FriendsLayer({ friends, origin, camera, width, height }: Props) 
             </Marker>
           ))}
 
-          {friend.position && (
-            <Marker
-              point={friend.position}
-              size={AVATAR}
-              camera={camera}
-              originMerc={originMerc}
-              width={width}
-              height={height}
-            >
-              <View
-                style={[
-                  styles.avatar,
-                  { backgroundColor: friend.color },
-                  !isFresh(friend.position) && styles.avatarStale,
-                ]}
-              >
-                <Text style={styles.avatarText}>{friend.initials}</Text>
-              </View>
-              <Text style={styles.name} numberOfLines={1}>
-                {friend.name}
-              </Text>
-            </Marker>
-          )}
         </React.Fragment>
       ))}
     </View>
@@ -156,28 +135,6 @@ const styles = StyleSheet.create({
   // Ширина фиксированная, чтобы подпись под меткой центрировалась
   // относительно самой метки, а не растягивала её.
   marker: { position: 'absolute', top: 0, left: 0, width: 96, marginLeft: -28, alignItems: 'center' },
-
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    borderWidth: 3,
-    borderColor: palette.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarStale: { opacity: 0.55 },
-  avatarText: { color: palette.parchmentBright, fontWeight: '900', fontSize: 13 },
-  name: {
-    marginTop: 2,
-    color: palette.parchmentBright,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    textShadowColor: palette.ink,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
 
   visit: {
     width: VISIT,

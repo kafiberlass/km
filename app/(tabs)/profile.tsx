@@ -8,7 +8,8 @@ import { resetDatabase } from '@/core/db/client';
 import { buildSnapshot, countCells, getProfile, unlockedAchievements } from '@/core/db/repo';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
-import { levelXpRequirement } from '@/core/rules/xp';
+import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
+import { Avatar } from '@/features/profile/Avatar';
 import { palette, radii, spacing } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
@@ -16,7 +17,6 @@ import { ActionButton } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
 
 /** Титулов по уровням ещё нет — он один на всё приложение, как и на карте. */
-const LEVEL_TITLE = 'Ночной бродяга';
 
 /** Сколько плиток ачивок помещается в строку профиля до «+N». */
 const RECENT_BADGES = 3;
@@ -57,13 +57,22 @@ export default function ProfileScreen() {
   return (
     <View style={styles.root}>
       <ScreenHeader
-        title={LEVEL_TITLE}
-        subtitle={`Уровень ${level} · ${streak} дней подряд`}
+        title={profile.displayName ?? levelTitle(level)}
+        subtitle={`${levelTitle(level)} · уровень ${level} · ${streak} дней подряд`}
         topInset={insets.top}
         avatar={
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>КМ</Text>
-          </View>
+          <Link href="/profile-edit" asChild>
+            <Pressable
+              style={({ pressed }) => [styles.avatarTap, pressed && styles.settingsPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Изменить имя и аватар"
+            >
+              <Avatar value={profile.avatar} size={72} name={profile.displayName} />
+              <View style={styles.avatarEdit}>
+                <Feather name="edit-2" size={12} color={palette.textDark} />
+              </View>
+            </Pressable>
+          </Link>
         }
       />
 
@@ -108,6 +117,14 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        <Link href="/profile-edit" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="user" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>ИМЯ И АВАТАР</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
 
         <Link href="/friends" asChild>
           <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
@@ -162,17 +179,20 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.dune },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
 
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
+  avatarTap: { alignItems: 'center' },
+  avatarEdit: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 3,
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: palette.textDark, fontWeight: '900', fontSize: 22, letterSpacing: 1 },
 
   tiles: { flexDirection: 'row', gap: spacing.sm },
   tile: {

@@ -7,12 +7,69 @@
  * показывает тост, сервер пересчитывает тем же кодом.
  */
 
+/** Выше не растём. Сотня — обозримый потолок: его видно с первого уровня. */
+export const MAX_LEVEL = 100;
+
 /**
- * Требование к следующему уровню. Линейная формула выбрана под макет:
- * на 12 уровне до 13-го нужно ровно 3000 XP.
+ * Требование к следующему уровню.
+ *
+ * Степень 1.15 — почти линейно, но с утяжелением: иначе сотый уровень
+ * либо берётся за месяц, либо не берётся никогда. Подобрано по тому,
+ * сколько опыта приносит живая прогулка (около 250 XP за активный день:
+ * километры, новые ячейки, квартал и бонус за первый выход):
+ *
+ *   10 уровень  — неделя
+ *   20 уровень  — месяц
+ *   50 уровень  — полгода
+ *   100 уровень — примерно два года
+ *
+ * Округление до десятков — чтобы в интерфейсе не мелькали числа вроде 1673.
  */
 export function levelXpRequirement(level: number): number {
-  return 250 * Math.max(1, level);
+  const capped = Math.min(Math.max(1, level), MAX_LEVEL);
+  // На потолке возвращаем требование предыдущего уровня, а не ноль:
+  // полоса прогресса делит на это число, и делить на ноль ей нечем.
+  const step = capped >= MAX_LEVEL ? MAX_LEVEL - 1 : capped;
+  return Math.round((40 + 22 * step ** 1.15) / 10) * 10;
+}
+
+/**
+ * Звания по уровням.
+ *
+ * Уровень — это число, а звание — то, что человек про себя говорит вслух.
+ * Пороги неровные: в начале они частые, чтобы новое звание пришло в первую
+ * же неделю, дальше реже, потому что и уровни идут медленнее.
+ */
+const TITLES: readonly { from: number; title: string }[] = [
+  { from: 1, title: 'Прохожий' },
+  { from: 5, title: 'Гуляка' },
+  { from: 10, title: 'Следопыт' },
+  { from: 20, title: 'Бродяга' },
+  { from: 30, title: 'Ночной бродяга' },
+  { from: 40, title: 'Разведчик' },
+  { from: 50, title: 'Картограф' },
+  { from: 60, title: 'Первопроходец' },
+  { from: 70, title: 'Хранитель троп' },
+  { from: 80, title: 'Знаток города' },
+  { from: 90, title: 'Легенда района' },
+  { from: MAX_LEVEL, title: 'Тот, кто открыл город' },
+];
+
+export function levelTitle(level: number): string {
+  let title = TITLES[0]!.title;
+  for (const band of TITLES) {
+    if (level >= band.from) title = band.title;
+  }
+  return title;
+}
+
+/** Сколько опыта нужно всего, чтобы дойти до этого уровня с нуля. */
+export function totalXpForLevel(level: number): number {
+  let sum = 0;
+  for (let current = 1; current < Math.min(level, MAX_LEVEL); current += 1) {
+    sum += levelXpRequirement(current);
+  }
+  return sum;
 }
 
 export type XpKind =
@@ -89,10 +146,17 @@ export function applyXp(state: LevelState, amount: number): LevelUpResult {
   let levelUps = 0;
 
   // while, а не if: импорт длинного трека может дать несколько уровней разом.
-  while (xp >= levelXpRequirement(level)) {
+  while (level < MAX_LEVEL && xp >= levelXpRequirement(level)) {
     xp -= levelXpRequirement(level);
     level += 1;
     levelUps += 1;
+  }
+
+  // На потолке опыт не копится дальше полосы: показывать «1200 из 4380»
+  // там, где расти уже некуда, — врать человеку про остаток.
+  if (level >= MAX_LEVEL) {
+    level = MAX_LEVEL;
+    xp = Math.min(xp, levelXpRequirement(MAX_LEVEL));
   }
 
   return { level, xp, levelUps };

@@ -7,10 +7,15 @@
 import { getRawDb } from './client';
 import { PARENT_RES, parentOf, type Cell } from '../geo/coverage';
 import type { GeoPoint } from '../geo/filter';
+import { completedCount, countByDistrict } from '../geo/districts';
 import type { StoredPoint } from '../walk/restore';
 import type { ProgressSnapshot } from '../rules/achievements';
 
 export interface ProfileRow {
+  /** Как человека зовут. null — ещё не представился. */
+  displayName: string | null;
+  /** «preset:<id>» или «photo:<uri>» — разбирается в features/profile/avatars.ts. */
+  avatar: string | null;
   level: number;
   xp: number;
   streakDays: number;
@@ -31,6 +36,8 @@ export function getProfile(): ProfileRow {
   const res = db.executeSync('SELECT * FROM profile WHERE id = 1');
   const raw = row<Record<string, unknown>>(res);
   return {
+    displayName: (raw?.display_name as string | null) ?? null,
+    avatar: (raw?.avatar as string | null) ?? null,
     level: Number(raw?.level ?? 1),
     xp: Number(raw?.xp ?? 0),
     streakDays: Number(raw?.streak_days ?? 0),
@@ -46,6 +53,8 @@ export function getProfile(): ProfileRow {
 export function updateProfile(patch: Partial<ProfileRow>): void {
   const db = getRawDb();
   const columns: Record<keyof ProfileRow, string> = {
+    displayName: 'display_name',
+    avatar: 'avatar',
     level: 'level',
     xp: 'xp',
     streakDays: 'streak_days',
@@ -414,6 +423,10 @@ export function buildSnapshot(homeRegionTotalCells: number): ProgressSnapshot {
   const profile = getProfile();
   const cells = countCells();
 
+  // Кварталы считаются по всей истории: отдельного счётчика в базе нет,
+  // а держать его в двух местах — верный способ разойтись с картой.
+  const districtsDone = completedCount(countByDistrict(allCells()));
+
   return {
     totalDistanceM: Number(stats?.total_distance ?? 0),
     totalWalks: Number(stats?.total_walks ?? 0),
@@ -425,5 +438,6 @@ export function buildSnapshot(homeRegionTotalCells: number): ProgressSnapshot {
     longestWalkM: Number(stats?.longest ?? 0),
     homeRegionRatio: homeRegionTotalCells > 0 ? cells / homeRegionTotalCells : 0,
     activeDays: Number(activeDays?.n ?? 0),
+    districtsDone,
   };
 }

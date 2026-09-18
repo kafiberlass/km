@@ -213,6 +213,8 @@ export function spreadMarkers<T extends { x: number; y: number }>(
   items: readonly T[],
   minGapPx: number,
 ): T[] {
+  'worklet';
+
   const result = items.slice();
   const cluster = new Array<number>(items.length).fill(-1);
   const clusters: number[][] = [];
