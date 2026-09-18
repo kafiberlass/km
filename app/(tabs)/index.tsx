@@ -17,7 +17,7 @@ import { getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
-import { palette, spacing } from '@/core/theme/tokens';
+import { fonts, palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { useFriends } from '@/features/friends';
@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
   chipOff: { backgroundColor: palette.sand },
   devLink: {
     color: palette.parchment,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
     padding: spacing.sm,

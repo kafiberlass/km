@@ -10,7 +10,7 @@ import { ACHIEVEMENTS } from '@/core/rules/achievements';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { Avatar } from '@/features/profile/Avatar';
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  tileValue: { fontSize: 24, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  tileValue: { fontSize: 24, fontFamily: fonts.display, fontWeight: '900', fontVariant: ['tabular-nums'] },
   tileLabel: { color: palette.textMuted, fontSize: 10, letterSpacing: 1, textAlign: 'center' },
 
   card: {
@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { color: palette.textDark, fontWeight: '900', letterSpacing: 1 },
-  cardLink: { color: palette.emberDeep, fontWeight: '900', letterSpacing: 1 },
+  cardTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
+  cardLink: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   badgeRow: { flexDirection: 'row', gap: spacing.sm },
   badge: {
     width: 52,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: palette.textMuted,
   },
-  badgeMoreText: { color: palette.textMuted, fontWeight: '900' },
+  badgeMoreText: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900' },
 
   friends: {
     flexDirection: 'row',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,
   },
-  friendsText: { color: palette.textDark, fontWeight: '900', letterSpacing: 1 },
+  friendsText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   settings: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.bark,
   },
   settingsPressed: { transform: [{ translateY: 2 }] },
-  settingsText: { color: palette.parchmentBright, fontWeight: '900', letterSpacing: 1 },
+  settingsText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
 
   note: {
     padding: spacing.md,
@@ -273,6 +273,6 @@ const styles = StyleSheet.create({
     backgroundColor: palette.fog,
     gap: 6,
   },
-  noteTitle: { color: palette.gold, fontWeight: '900' },
+  noteTitle: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900' },
   noteBody: { color: palette.parchment, lineHeight: 20 },
 });

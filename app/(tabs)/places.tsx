@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { allPlaces, getProfile } from '@/core/db/repo';
 import { haversineMeters } from '@/core/geo/mercator';
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -135,9 +135,10 @@ const styles = StyleSheet.create({
   },
   badgeHidden: { backgroundColor: '#B6A883', borderColor: palette.textMuted },
   body: { flex: 1, gap: 2 },
-  title: { color: palette.textDark, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
-  titleHidden: { color: palette.textMuted, fontWeight: '900', fontSize: 16 },
+  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  titleHidden: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
   subtitle: {
+    fontFamily: fonts.body,
     color: palette.textMuted,
     fontSize: 11,
     letterSpacing: 0.8,

@@ -8,7 +8,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { palette, radii, spacing, sunsetBands } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing, sunsetBands } from '@/core/theme/tokens';
 import { Avatar } from '@/features/profile/Avatar';
 
 interface Props {
@@ -125,10 +125,12 @@ const styles = StyleSheet.create({
   title: {
     color: palette.textOnDark,
     fontSize: 20,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   subtitle: {
+    fontFamily: fonts.body,
     color: palette.parchment,
     fontSize: 12,
     letterSpacing: 1.5,
@@ -147,5 +149,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#3A2A1E',
   },
   streakIcon: { fontSize: 14 },
-  streakValue: { color: palette.gold, fontWeight: '900', fontSize: 16 },
+  streakValue: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
 });

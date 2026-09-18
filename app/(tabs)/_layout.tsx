@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 
 /**
  * Высота панели без учёта жеста «домой».
@@ -82,5 +82,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     paddingVertical: spacing.xs,
   },
-  label: { fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 0 },
+  label: { fontSize: 10, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, marginBottom: 0 },
 });

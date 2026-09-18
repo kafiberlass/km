@@ -4,16 +4,27 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
+import { useFonts } from 'expo-font';
 
 import { migrate } from '@/core/db/client';
 import { seedDemoPlaces } from '@/features/places/seed';
-import { palette } from '@/core/theme/tokens';
+import { fonts, palette } from '@/core/theme/tokens';
 import { useWalkStore } from '@/store/useWalkStore';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hydrate = useWalkStore((s) => s.hydrate);
+
+  // Шрифты макета: Oswald для заголовков, VT323 для цифр. Оба под OFL,
+  // встраивание разрешено. Если файл не прочитался, `fontsError` не должен
+  // держать приложение на заставке — текст просто нарисуется системным
+  // шрифтом, и это гораздо лучше, чем чёрный экран.
+  const [fontsLoaded, fontsError] = useFonts({
+    'Oswald-Bold': require('../assets/fonts/Oswald-Bold.ttf'),
+    'Oswald-Regular': require('../assets/fonts/Oswald-Regular.ttf'),
+    'VT323-Regular': require('../assets/fonts/VT323-Regular.ttf'),
+  });
 
   useEffect(() => {
     try {
@@ -37,7 +48,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!ready) {
+  if (!ready || (!fontsLoaded && !fontsError)) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={palette.ember} />
@@ -76,6 +87,6 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: palette.fog,
   },
-  errorTitle: { color: palette.textOnDark, fontWeight: '900', fontSize: 18, marginBottom: 8 },
+  errorTitle: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 18, marginBottom: 8 },
   errorBody: { color: palette.parchment, textAlign: 'center' },
 });

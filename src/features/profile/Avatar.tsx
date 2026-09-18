@@ -9,7 +9,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { palette } from '@/core/theme/tokens';
+import { fonts, palette } from '@/core/theme/tokens';
 
 import { initialsOf, parseAvatar } from './avatars';
 
@@ -61,5 +61,5 @@ const styles = StyleSheet.create({
     backgroundColor: palette.sand,
   },
   center: { alignItems: 'center', justifyContent: 'center' },
-  initials: { color: palette.parchmentBright, fontWeight: '900', letterSpacing: 1 },
+  initials: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
 });

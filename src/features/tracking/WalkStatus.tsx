@@ -11,7 +11,7 @@ import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { useAlwaysSharing } from '@/features/friends';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -98,13 +98,15 @@ const styles = StyleSheet.create({
   },
   activeText: {
     color: palette.textOnDark,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
     fontVariant: ['tabular-nums'],
   },
-  idleText: { color: palette.textMuted, fontWeight: '900', letterSpacing: 1 },
+  idleText: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   divider: { width: 1, height: 16, backgroundColor: palette.textMuted, opacity: 0.4 },
-  sharingText: { color: palette.emberDeep, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
-  deniedText: { color: palette.textOnDark, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
-  hint: { color: palette.parchment, fontSize: 12, opacity: 0.8 },
+  sharingText: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  deniedText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  hint: {
+    fontFamily: fonts.body, color: palette.parchment, fontSize: 12, opacity: 0.8 },
 });

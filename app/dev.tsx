@@ -18,7 +18,7 @@ import { countInbox } from '@/core/db/inbox';
 import { countCells } from '@/core/db/repo';
 import { DEFAULT_FILTER, filterTrack } from '@/core/geo/filter';
 import { parseGpx } from '@/core/geo/gpx';
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { fogSetting, useFogEnabled } from '@/features/fog/fogSetting';
 import { MockTrackingProvider } from '@/features/tracking/mock';
 import { ActionButton, Stat } from '@/ui/widgets';
@@ -178,7 +178,7 @@ export default function DevScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.fog },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
-  heading: { color: palette.textOnDark, fontSize: 24, fontWeight: '900', letterSpacing: 2 },
+  heading: { color: palette.textOnDark, fontSize: 24, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 2 },
   subheading: { color: palette.parchment, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   logBox: {
@@ -191,5 +191,5 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   logEmpty: { color: palette.textMuted },
-  logLine: { color: palette.parchment, fontSize: 11, fontFamily: 'monospace' },
+  logLine: { color: palette.parchment, fontSize: 12, fontFamily: fonts.mono },
 });

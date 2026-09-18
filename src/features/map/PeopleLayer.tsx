@@ -25,7 +25,7 @@ import {
   projectToScreenWorklet,
   type LngLat,
 } from '@/core/geo/mercator';
-import { palette } from '@/core/theme/tokens';
+import { fonts, palette } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { isFresh, type Friend } from '@/features/friends/types';
 import { spreadMarkers } from '@/features/globe/projection';
@@ -228,11 +228,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stale: { opacity: 0.55 },
-  avatarText: { color: palette.parchmentBright, fontWeight: '900', fontSize: 13 },
+  avatarText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', fontSize: 13 },
   name: {
     marginTop: 2,
     color: palette.parchmentBright,
     fontSize: 11,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 0.5,
     textShadowColor: palette.ink,

@@ -21,7 +21,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { Avatar } from '@/features/profile/Avatar';
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.parchment,
     gap: spacing.sm,
   },
-  cardTitle: { color: palette.textMuted, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  cardTitle: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   input: {
     borderWidth: 3,
     borderColor: palette.ink,
@@ -195,9 +195,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     color: palette.textDark,
     fontSize: 16,
+    fontFamily: fonts.display,
     fontWeight: '700',
   },
-  hint: { color: palette.textMuted, fontSize: 12 },
+  hint: {
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tile: {
     width: 56,
@@ -212,6 +214,6 @@ const styles = StyleSheet.create({
   // отличать надо чем-то другим.
   tileChosen: { borderColor: palette.parchmentBright, borderWidth: 5 },
   tilePressed: { transform: [{ translateY: 2 }] },
-  ok: { color: palette.teal, fontWeight: '700' },
-  error: { color: palette.rust, fontWeight: '700' },
+  ok: { color: palette.teal, fontFamily: fonts.display, fontWeight: '700' },
+  error: { color: palette.rust, fontFamily: fonts.display, fontWeight: '700' },
 });

@@ -34,7 +34,7 @@ import {
   type Friend,
 } from '@/features/friends';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 
@@ -388,9 +388,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dim: { opacity: 0.55 },
-  avatarText: { color: palette.parchmentBright, fontWeight: '900', fontSize: 15 },
-  name: { color: palette.textDark, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
-  status: { color: palette.textMuted, fontSize: 11, letterSpacing: 0.8 },
+  avatarText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', fontSize: 15 },
+  name: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  status: {
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: 11, letterSpacing: 0.8 },
   dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: palette.ink },
   dotLive: { backgroundColor: palette.ember },
   dotStale: { backgroundColor: palette.sand },
@@ -417,18 +418,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  visitTitle: { flex: 1, color: palette.textDark, fontWeight: '800', fontSize: 13 },
-  visitTime: { color: palette.textMuted, fontSize: 11 },
+  visitTitle: { flex: 1, color: palette.textDark, fontFamily: fonts.display, fontWeight: '800', fontSize: 13 },
+  visitTime: {
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: 11 },
 
-  cardTitle: { color: palette.textDark, fontWeight: '900', letterSpacing: 1 },
+  cardTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   code: {
     color: palette.emberDeep,
     fontSize: 34,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 6,
     fontVariant: ['tabular-nums'],
   },
-  hint: { color: palette.textMuted, fontSize: 12, lineHeight: 17 },
+  hint: {
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: 12, lineHeight: 17 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   input: {
     flex: 1,
@@ -439,11 +443,12 @@ const styles = StyleSheet.create({
     borderColor: palette.ink,
     backgroundColor: palette.parchment,
     color: palette.textDark,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 2,
   },
-  ok: { color: palette.teal, fontWeight: '800' },
-  error: { color: palette.rust, fontWeight: '800' },
+  ok: { color: palette.teal, fontFamily: fonts.display, fontWeight: '800' },
+  error: { color: palette.rust, fontFamily: fonts.display, fontWeight: '800' },
 
   note: {
     padding: spacing.md,
@@ -453,6 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.fog,
     gap: 6,
   },
-  noteTitle: { color: palette.gold, fontWeight: '900' },
-  noteBody: { color: palette.parchment, lineHeight: 20 },
+  noteTitle: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900' },
+  noteBody: {
+    fontFamily: fonts.body, color: palette.parchment, lineHeight: 20 },
 });

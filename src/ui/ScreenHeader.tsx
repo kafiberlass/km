@@ -14,7 +14,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { palette, spacing, sunsetBands } from '@/core/theme/tokens';
+import { fonts, palette, spacing, sunsetBands } from '@/core/theme/tokens';
 
 interface Props {
   title: string;
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
   title: {
     color: palette.parchmentBright,
     fontSize: 24,
+    fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
     textShadowColor: palette.ink,
@@ -125,6 +126,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 0,
   },
   subtitle: {
+    fontFamily: fonts.body,
     color: palette.parchment,
     fontSize: 12,
     letterSpacing: 1.5,

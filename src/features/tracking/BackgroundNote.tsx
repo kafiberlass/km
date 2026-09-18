@@ -9,7 +9,7 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 
-import { palette } from '@/core/theme/tokens';
+import { fonts, palette } from '@/core/theme/tokens';
 import { useWalkStore } from '@/store/useWalkStore';
 
 export function BackgroundNote() {
@@ -42,6 +42,7 @@ export function BackgroundNote() {
 }
 
 const styles = StyleSheet.create({
-  ok: { color: palette.parchment, fontSize: 12, textAlign: 'center', opacity: 0.8 },
-  warn: { color: palette.gold, fontSize: 12, textAlign: 'center', fontWeight: '700' },
+  ok: {
+    fontFamily: fonts.body, color: palette.parchment, fontSize: 12, textAlign: 'center', opacity: 0.8 },
+  warn: { color: palette.gold, fontSize: 12, textAlign: 'center', fontFamily: fonts.display, fontWeight: '700' },
 });

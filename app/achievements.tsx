@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 
 import { buildSnapshot, countCells, unlockedAchievements } from '@/core/db/repo';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -116,8 +116,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
-  title: { color: palette.textDark, fontWeight: '900', fontSize: 14, letterSpacing: 0.5 },
-  description: { color: palette.textMuted, fontSize: 12, lineHeight: 16 },
+  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 14, letterSpacing: 0.5 },
+  description: {
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: 12, lineHeight: 16 },
   textLocked: { opacity: 0.65 },
   track: {
     height: 8,
@@ -128,5 +129,5 @@ const styles = StyleSheet.create({
   },
   fill: { height: '100%', backgroundColor: palette.ember },
   progress: { color: palette.textMuted, fontSize: 11, fontVariant: ['tabular-nums'] },
-  reward: { color: palette.emberDeep, fontSize: 12, fontWeight: '900' },
+  reward: { color: palette.emberDeep, fontSize: 12, fontFamily: fonts.display, fontWeight: '900' },
 });

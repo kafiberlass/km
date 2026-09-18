@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 
 export function XpBar({
   ratio,
@@ -139,10 +139,11 @@ const styles = StyleSheet.create({
   barLabel: {
     position: 'absolute',
     alignSelf: 'center',
-    top: 4,
+    top: 3,
     color: palette.textDark,
-    fontSize: 11,
-    fontWeight: '900',
+    // Цифры — пиксельным шрифтом: в макете все числа набраны им.
+    fontSize: 15,
+    fontFamily: fonts.mono,
     letterSpacing: 1,
     fontVariant: ['tabular-nums'],
   },
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     borderColor: palette.ink,
     backgroundColor: palette.parchmentBright,
   },
-  chipText: { color: palette.textDark, fontWeight: '800', letterSpacing: 1 },
+  chipText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '800', letterSpacing: 1 },
 
   toast: {
     flexDirection: 'row',
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
   },
   toastIconText: { fontSize: 20 },
   toastBody: { flex: 1 },
-  toastTitle: { color: palette.textDark, fontWeight: '900', fontSize: 16 },
+  toastTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
   toastSubtitle: { color: palette.textMuted, marginTop: 2, fontVariant: ['tabular-nums'] },
   toastClose: {
     width: 36,
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toastCloseText: { color: palette.textDark, fontWeight: '900' },
+  toastCloseText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900' },
 
   button: {
     paddingHorizontal: spacing.xl,
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   buttonGhost: { backgroundColor: palette.parchmentBright },
   buttonPressed: { transform: [{ translateY: 2 }] },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: palette.textOnDark, fontWeight: '900', letterSpacing: 1 },
+  buttonText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   buttonTextGhost: { color: palette.textDark },
 
   stat: {
@@ -236,6 +237,7 @@ const styles = StyleSheet.create({
   statValue: {
     color: palette.textDark,
     fontSize: 22,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
