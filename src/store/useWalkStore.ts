@@ -34,6 +34,7 @@ import { isAfterSunset } from '@/core/geo/sun';
 import { restoreWalk } from '@/core/walk/restore';
 import { isWalkResumable } from '@/core/walk/session';
 import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
+import { sharingSetting } from '@/features/friends/sharingSetting';
 import {
   decideAutoWalk,
   isIdleTooLong,
@@ -381,6 +382,11 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       if (decision.action === 'stop') void get().stop();
       return;
     }
+
+    // Круглосуточная трансляция: вне прогулки позиция уходит только если
+    // человек включил это сам. Частота та же, что и на прогулке, —
+    // ограничение живёт внутри publishIfNeeded.
+    if (origin && sharingSetting.get()) publishIfNeeded(origin, point);
 
     recent.push(point);
     if (recent.length > RECENT_LIMIT) recent.shift();

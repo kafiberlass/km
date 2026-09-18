@@ -12,4 +12,5 @@ export { serverConfig } from './config';
 export { createFriendsProvider, isServerConfigured } from './provider';
 export { useFriends } from './useFriends';
 export { publishIfNeeded, resetPublisher } from './publisher';
+export { sharingSetting, useAlwaysSharing } from './sharingSetting';
 export { shouldPublish, PUBLISH_MIN_DISTANCE_M, PUBLISH_MIN_INTERVAL_MS } from './publish';

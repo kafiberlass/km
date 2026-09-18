@@ -6,7 +6,16 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -18,9 +27,13 @@ import {
   createFriendsProvider,
   isFresh,
   isServerConfigured,
+  publishIfNeeded,
+  sharingSetting,
+  useAlwaysSharing,
   useFriends,
   type Friend,
 } from '@/features/friends';
+import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -60,6 +73,16 @@ export default function FriendsScreen() {
 
   const friends = useFriends(origin);
   const online = friends.filter((f) => f.position != null && isFresh(f.position)).length;
+
+  const alwaysSharing = useAlwaysSharing();
+  const { point: myPoint } = useMyPosition();
+
+  const toggleSharing = useCallback(() => {
+    const next = sharingSetting.toggle();
+    // Включили — отправляем сразу, не дожидаясь, пока человек куда-то
+    // пойдёт: иначе друзья ещё час видят вчерашнюю точку.
+    if (next && myPoint) publishIfNeeded(origin, myPoint);
+  }, [myPoint, origin.lat, origin.lng]);
 
   const [myCode, setMyCode] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -196,12 +219,26 @@ export default function FriendsScreen() {
 
         {isServerConfigured() ? (
           <View style={styles.note}>
-            <Text style={styles.noteTitle}>Позиция уходит только на прогулке</Text>
-            <Text style={styles.noteBody}>
-              Пока прогулка не запущена, друзья видят вашу последнюю точку и время,
-              когда она обновлялась. Круглосуточной трансляции нет — это отдельная
-              фича и отдельный разговор про приватность.
-            </Text>
+            <View style={styles.shareRow}>
+              <View style={styles.shareBody}>
+                <Text style={styles.noteTitle}>
+                  {alwaysSharing ? 'Делюсь позицией всегда' : 'Делюсь только на прогулке'}
+                </Text>
+                <Text style={styles.noteBody}>
+                  {alwaysSharing
+                    ? 'Друзья видят, где вы, и когда прогулка не идёт. Позиция уходит не чаще раза в минуту и ста метров, а пока вы стоите на месте — не уходит вовсе.'
+                    : 'Пока прогулка не идёт, друзья видят вашу последнюю точку и время, когда она обновлялась. Включите, чтобы метка ехала за вами всегда.'}
+                </Text>
+              </View>
+
+              <Switch
+                value={alwaysSharing}
+                onValueChange={toggleSharing}
+                trackColor={{ false: palette.sand, true: palette.ember }}
+                thumbColor={palette.parchmentBright}
+                accessibilityLabel="Круглосуточная трансляция позиции"
+              />
+            </View>
           </View>
         ) : (
           <View style={styles.note}>
@@ -337,6 +374,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  shareRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  shareBody: { flex: 1, gap: spacing.xs },
   headPressed: { opacity: 0.7 },
   headBody: { flex: 1, gap: 2 },
   avatar: {

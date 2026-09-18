@@ -12,6 +12,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { palette, radii, spacing } from '@/core/theme/tokens';
+import { useAlwaysSharing } from '@/features/friends';
 import { useWalkStore } from '@/store/useWalkStore';
 
 import { BackgroundNote } from './BackgroundNote';
@@ -20,6 +21,7 @@ export function WalkStatus() {
   const status = useWalkStore((s) => s.status);
   const distanceM = useWalkStore((s) => s.distanceM);
   const permission = useWalkStore((s) => s.permission);
+  const sharing = useAlwaysSharing();
 
   const tracking = status === 'tracking' || status === 'starting';
 
@@ -54,6 +56,16 @@ export function WalkStatus() {
       <View style={styles.pill}>
         <Feather name="clock" size={16} color={palette.textMuted} />
         <Text style={styles.idleText}>ЖДУ ПРОГУЛКУ</Text>
+
+        {/* Трансляция должна быть видна всегда, а не только на экране,
+            где её включили: человек имеет право знать, что его видно. */}
+        {sharing && (
+          <>
+            <View style={styles.divider} />
+            <Feather name="radio" size={16} color={palette.emberDeep} />
+            <Text style={styles.sharingText}>ВИДЕН ДРУЗЬЯМ</Text>
+          </>
+        )}
       </View>
       <Text style={styles.hint}>запись включится сама, когда вы пойдёте</Text>
     </View>
@@ -91,6 +103,8 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   idleText: { color: palette.textMuted, fontWeight: '900', letterSpacing: 1 },
+  divider: { width: 1, height: 16, backgroundColor: palette.textMuted, opacity: 0.4 },
+  sharingText: { color: palette.emberDeep, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   deniedText: { color: palette.textOnDark, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   hint: { color: palette.parchment, fontSize: 12, opacity: 0.8 },
 });
