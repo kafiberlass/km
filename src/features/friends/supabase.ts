@@ -73,6 +73,8 @@ export class SupabaseFriendsProvider implements FriendsProvider {
   private readonly listeners = new Set<(friends: Friend[]) => void>();
   private channel: RealtimeChannel | null = null;
   private latest: Friend[] = [];
+  /** Свой идентификатор: спрашивать сессию на каждый чих незачем. */
+  private userId: string | null = null;
 
   constructor(url: string, anonKey: string) {
     this.client = createClient(url, anonKey, {
@@ -88,32 +90,46 @@ export class SupabaseFriendsProvider implements FriendsProvider {
 
   /** Анонимный вход: аккаунт заводится молча при первом запуске. */
   private async ensureSession(): Promise<string | null> {
+    if (this.userId) return this.userId;
+
     const existing = await this.client.auth.getSession();
-    if (existing.data.session) return existing.data.session.user.id;
+    if (existing.data.session) {
+      this.userId = existing.data.session.user.id;
+      return this.userId;
+    }
 
     const created = await this.client.auth.signInAnonymously();
     if (created.error) {
       console.warn('[friends] анонимный вход не удался', created.error.message);
       return null;
     }
-    return created.data.user?.id ?? null;
+
+    this.userId = created.data.user?.id ?? null;
+    return this.userId;
   }
 
   private async loadFriends(): Promise<Friend[]> {
     const me = await this.ensureSession();
-    if (!me) return [];
 
-    // Фильтр по своей стороне обязателен: политика доступа пускает
-    // и к встречной строке связи, где friend_id — это я сам.
-    const links = await this.client.from('friendships').select('user_id, friend_id').eq('user_id', me);
+    // Берём обе стороны связи, а не только «свою». Фильтровать себя
+    // запросом оказалось хрупко: если строки завелись в одном
+    // направлении — а так бывает у связей, заведённых старой версией, —
+    // друг пропадает из списка целиком. Убрать себя может и разбор,
+    // а вот достать недостающую строку он не может ниоткуда.
+    const links = await this.client.from('friendships').select('user_id, friend_id');
     if (links.error) {
+      // Не стираем список из-за сетевой ошибки: показать вчерашние
+      // позиции честнее, чем сделать вид, что друзей нет.
       console.warn('[friends] список друзей не пришёл', links.error.message);
-      return [];
+      return this.latest;
     }
 
-    // И ещё раз то же самое на всякий случай: строки могли приехать
-    // из realtime-события, а не из этого запроса.
-    const ids = friendIdsFrom(links.data as FriendshipRow[], me);
+    const ids = friendIdsFrom(links.data as FriendshipRow[], me ?? '');
+
+    // Одна строка в логе на обновление: когда друзья «пропали», это первое,
+    // что надо знать — связей нет вовсе или они есть, но все свои.
+    console.log(`[friends] связей: ${links.data.length}, друзей: ${ids.length}`);
+
     if (ids.length === 0) return [];
 
     // Три запроса вместо джойна: политики доступа всё равно отсекут чужое,
