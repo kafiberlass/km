@@ -314,6 +314,7 @@ npm run setup:ios:friend      # то же самое, но Release
 ```
 app/                      экраны (expo-router)
   (tabs)/index.tsx        карта + туман + HUD (кнопки прогулки нет)
+  (tabs)/friends.tsx      друзья: код, список, трансляция позиции
   achievements.tsx        достижения — из профиля, не из нижней панели
   history.tsx             история прогулок по дням
   backup.tsx              сохранить и восстановить всё

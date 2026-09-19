@@ -55,6 +55,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="friends"
+        options={{
+          title: 'ДРУЗЬЯ',
+          tabBarIcon: ({ color }) => <Feather name="users" size={20} color={color as string} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'ПРОФИЛЬ',

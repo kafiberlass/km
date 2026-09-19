@@ -163,7 +163,9 @@ export default function FriendsScreen() {
         title="Друзья"
         subtitle={`${friends.length} всего · ${online} на прогулке`}
         topInset={insets.top}
-        onClose={() => router.back()}
+        // Друзья теперь вкладка, но на этот же экран попадают и из профиля.
+        // Крестик нужен только во втором случае: на вкладке закрывать нечего.
+        onClose={router.canGoBack() ? () => router.back() : undefined}
       />
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

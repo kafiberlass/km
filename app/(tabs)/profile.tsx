@@ -89,42 +89,37 @@ export default function ProfileScreen() {
           <Tile value={String(streak)} label="дней подряд" color={palette.emberDeep} />
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHead}>
-            <Text style={styles.cardTitle}>ПОСЛЕДНИЕ АЧИВКИ</Text>
-            <Link href="/achievements" style={styles.cardLink}>
-              ВСЕ ›
-            </Link>
-          </View>
-
-          <View style={styles.badgeRow}>
-            {shown.map((achievement) => {
-              const badge = badgeFor(achievement.code);
-              return (
-                <View
-                  key={achievement.code}
-                  style={[styles.badge, { backgroundColor: badge.color }]}
-                >
-                  <Feather name={badge.icon} size={22} color={palette.parchmentBright} />
-                </View>
-              );
-            })}
-
-            {/* Пустая пунктирная плитка: сколько ещё ачивок не поместилось
-                или, пока их нет вовсе, сколько всего можно получить. */}
-            <View style={[styles.badge, styles.badgeMore]}>
-              <Text style={styles.badgeMoreText}>
-                +{rest > 0 ? rest : ACHIEVEMENTS.length - earned.length}
-              </Text>
+        {/* Нажимается вся карточка, а не только ссылка «ВСЕ»: человек
+            тянется к значкам и к плитке «+23» — именно они и выглядят
+            как «покажи остальные». */}
+        <Link href="/achievements" asChild>
+          <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+            <View style={styles.cardHead}>
+              <Text style={styles.cardTitle}>ПОСЛЕДНИЕ АЧИВКИ</Text>
+              <Text style={styles.cardLink}>ВСЕ ›</Text>
             </View>
-          </View>
-        </View>
 
-        <Link href="/profile-edit" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="user" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>ИМЯ И АВАТАР</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
+            <View style={styles.badgeRow}>
+              {shown.map((achievement) => {
+                const badge = badgeFor(achievement.code);
+                return (
+                  <View
+                    key={achievement.code}
+                    style={[styles.badge, { backgroundColor: badge.color }]}
+                  >
+                    <Feather name={badge.icon} size={22} color={palette.parchmentBright} />
+                  </View>
+                );
+              })}
+
+              {/* Пустая пунктирная плитка: сколько ещё ачивок не поместилось
+                  или, пока их нет вовсе, сколько всего можно получить. */}
+              <View style={[styles.badge, styles.badgeMore]}>
+                <Text style={styles.badgeMoreText}>
+                  +{rest > 0 ? rest : ACHIEVEMENTS.length - earned.length}
+                </Text>
+              </View>
+            </View>
           </Pressable>
         </Link>
 
@@ -235,6 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.parchmentBright,
     gap: spacing.md,
   },
+  cardPressed: { opacity: 0.85, transform: [{ translateY: 2 }] },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   cardLink: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },

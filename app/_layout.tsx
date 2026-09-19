@@ -63,7 +63,6 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: styles.root }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="dev" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="friends" options={{ presentation: 'modal' }} />
           {/* Ачивки — не отдельная вкладка: разглядывать их каждый день
               незачем, а место в панели стоит дорого. Открываются из профиля. */}
           <Stack.Screen name="achievements" options={{ presentation: 'modal' }} />
