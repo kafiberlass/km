@@ -18,6 +18,7 @@ import type { LngLat } from '@/core/geo/mercator';
 import { palette } from '@/core/theme/tokens';
 
 import { serverConfig } from './config';
+import { friendIdsFrom, type FriendshipRow } from './links';
 import { sqliteSessionStorage } from './sessionStorage';
 import type { Friend, FriendsProvider, FriendVisit } from './types';
 
@@ -99,13 +100,20 @@ export class SupabaseFriendsProvider implements FriendsProvider {
   }
 
   private async loadFriends(): Promise<Friend[]> {
-    const links = await this.client.from('friendships').select('friend_id');
+    const me = await this.ensureSession();
+    if (!me) return [];
+
+    // Фильтр по своей стороне обязателен: политика доступа пускает
+    // и к встречной строке связи, где friend_id — это я сам.
+    const links = await this.client.from('friendships').select('user_id, friend_id').eq('user_id', me);
     if (links.error) {
       console.warn('[friends] список друзей не пришёл', links.error.message);
       return [];
     }
 
-    const ids = links.data.map((row) => (row as { friend_id: string }).friend_id);
+    // И ещё раз то же самое на всякий случай: строки могли приехать
+    // из realtime-события, а не из этого запроса.
+    const ids = friendIdsFrom(links.data as FriendshipRow[], me);
     if (ids.length === 0) return [];
 
     // Три запроса вместо джойна: политики доступа всё равно отсекут чужое,
