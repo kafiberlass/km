@@ -34,8 +34,14 @@ if ! git diff --quiet -- package-lock.json; then
   bold "  package-lock.json восстановлен (его меняет сборка, это нормально)"
 fi
 
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  git stash push --message "перед обновлением $(date '+%d.%m %H:%M')" >/dev/null
+# app.json из отката исключён намеренно: EAS дописывает туда своё —
+# идентификатор проекта и адрес обновлений, привязанные к конкретному
+# аккаунту. Откатить их значит заставить EAS настраивать всё заново
+# при каждой сборке, а сборку — падать с просьбой повторить команду.
+if ! git diff --quiet -- . ':(exclude)app.json' \
+  || ! git diff --cached --quiet -- . ':(exclude)app.json'; then
+  git stash push --message "перед обновлением $(date '+%d.%m %H:%M')" \
+    -- . ':(exclude)app.json' >/dev/null
   warn "  Ваши правки в коде отложены в сторону (git stash)."
   warn "  Вернуть их потом: git stash pop"
 fi
