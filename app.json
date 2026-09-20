@@ -7,6 +7,12 @@
     "scheme": "km",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "runtimeVersion": "1",
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": { "expo-channel-name": "preview" }
+    },
     "backgroundColor": "#2E1F17",
     "icon": "./assets/icon.png",
     "ios": {

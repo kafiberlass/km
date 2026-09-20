@@ -155,6 +155,14 @@ export default function ProfileScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/update" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="refresh-cw" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>ОБНОВЛЕНИЕ</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
+
         <Link href="/dev" asChild>
           <Pressable style={({ pressed }) => [styles.settings, pressed && styles.settingsPressed]}>
             <Feather name="settings" size={18} color={palette.parchmentBright} />
