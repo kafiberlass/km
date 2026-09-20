@@ -139,6 +139,14 @@ export default function ProfileScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/offline" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="download" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>КАРТА ОФЛАЙН</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
+
         <Link href="/backup" asChild>
           <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
             <Feather name="save" size={18} color={palette.textDark} />
