@@ -11,6 +11,7 @@ import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { useAlwaysSharing } from '@/features/friends';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -46,6 +47,9 @@ export function WalkStatus() {
           <View style={styles.dot} />
           <Text style={styles.activeText}>ИДУ · {(distanceM / 1000).toFixed(2)} КМ</Text>
         </View>
+        {/* Шаги отдельной строкой, а не в таблетке: длинную строку
+            она переносит, и получается два этажа текста в овале. */}
+        <Text style={styles.hint}>≈ {formatSteps(stepsFromMeters(distanceM))} шагов</Text>
         <BackgroundNote />
       </View>
     );

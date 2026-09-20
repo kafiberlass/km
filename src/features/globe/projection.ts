@@ -107,31 +107,64 @@ export function globeScale(zoom: number): number {
 }
 
 /**
- * Точка на сфере -> точка на экране.
+ * Точка сферы единичным вектором: север — вверх, нулевой меридиан — на нас.
+ *
+ * Считается один раз на точку за всё время работы приложения. Смысл
+ * в этом: у поворота планеты вся цена — в синусах и косинусах, а они
+ * зависят только от самой точки, не от того, каким боком к нам Земля.
+ * Вынесли их отсюда — и поворот стал арифметикой.
+ */
+export function unitOf(lng: number, lat: number): [number, number, number] {
+  const phi = lat * RAD;
+  const lambda = lng * RAD;
+  const cosPhi = Math.cos(phi);
+  return [cosPhi * Math.cos(lambda), cosPhi * Math.sin(lambda), Math.sin(phi)];
+}
+
+/** Синусы-косинусы поворота планеты: четыре на кадр вместо четырёх на точку. */
+export interface GlobeTrig {
+  sinLng0: number;
+  cosLng0: number;
+  sinLat0: number;
+  cosLat0: number;
+}
+
+export function globeTrig(view: GlobeView): GlobeTrig {
+  const lambda0 = view.lng0 * RAD;
+  const phi0 = view.lat0 * RAD;
+  return {
+    sinLng0: Math.sin(lambda0),
+    cosLng0: Math.cos(lambda0),
+    sinLat0: Math.sin(phi0),
+    cosLat0: Math.cos(phi0),
+  };
+}
+
+/**
+ * Единичный вектор -> точка на экране. Ни одного синуса.
  *
  * Точки за горизонтом не выбрасываются, а прижимаются к краю диска.
  * Иначе материк, уходящий за шар, замкнулся бы хордой через середину
  * планеты — Евразия бы «схлопнулась» на глазах при повороте.
  */
-export function projectGlobe(lng: number, lat: number, view: GlobeView): GlobePoint {
-  const phi = lat * RAD;
-  const phi0 = view.lat0 * RAD;
-  const dLambda = (lng - view.lng0) * RAD;
-
-  const sinPhi = Math.sin(phi);
-  const cosPhi = Math.cos(phi);
-  const sinPhi0 = Math.sin(phi0);
-  const cosPhi0 = Math.cos(phi0);
-  const cosD = Math.cos(dLambda);
+export function projectUnit(
+  a: number,
+  b: number,
+  c: number,
+  trig: GlobeTrig,
+  view: GlobeView,
+): GlobePoint {
+  // cosPhi * cos(lambda - lambda0) и cosPhi * sin(lambda - lambda0),
+  // разложенные по формуле разности углов: в единичном векторе уже лежит
+  // всё, что для этого нужно.
+  const along = a * trig.cosLng0 + b * trig.sinLng0;
+  let x = b * trig.cosLng0 - a * trig.sinLng0;
+  let y = trig.cosLat0 * c - trig.sinLat0 * along;
 
   // cosC — косинус углового расстояния до центра диска: >= 0 значит
   // «на видимой половине».
-  const cosC = sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosD;
+  const front = trig.sinLat0 * c + trig.cosLat0 * along >= 0;
 
-  let x = cosPhi * Math.sin(dLambda);
-  let y = cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosD;
-
-  const front = cosC >= 0;
   if (!front) {
     const len = Math.hypot(x, y);
     if (len > 0) {
@@ -142,6 +175,12 @@ export function projectGlobe(lng: number, lat: number, view: GlobeView): GlobePo
 
   // Ось Y на экране растёт вниз, на глобусе север — вверх.
   return { x: view.cx + x * view.r, y: view.cy - y * view.r, front };
+}
+
+/** То же самое для одиночной точки, заданной широтой и долготой. */
+export function projectGlobe(lng: number, lat: number, view: GlobeView): GlobePoint {
+  const [a, b, c] = unitOf(lng, lat);
+  return projectUnit(a, b, c, globeTrig(view), view);
 }
 
 /** Меридианы и параллели через каждые `stepDeg` градусов — как линии на глобусе. */
@@ -205,9 +244,14 @@ export function globeMarkers<T>(
  * Без разведения метка друга оказывается ровно под своей: рисуются обе,
  * видно одну, и выглядит это как «друга на планете нет».
  *
- * Слипшиеся метки раскладываются по кругу вокруг общего центра. Точность
- * при этом теряется — но в масштабе планеты её и так нет: важно, что
- * человек рядом, а не в Австралии.
+ * Раздвигание плавное, и это главное свойство. Раньше слипшиеся метки
+ * раскладывались по кругу вокруг общего центра, и пока они считались
+ * слипшимися, расстояние между ними держалось постоянным. Человек
+ * приближал карту, настоящее расстояние росло, нарисованное стояло —
+ * а в тот момент, когда метки переставали считаться слипшимися, они
+ * прыжком съезжались обратно. Здесь метки лишь расталкиваются ровно
+ * настолько, насколько им не хватает до зазора: разошлись сами —
+ * раздвигать нечего, и прыжку взяться неоткуда.
  */
 export function spreadMarkers<T extends { x: number; y: number }>(
   items: readonly T[],
@@ -215,44 +259,48 @@ export function spreadMarkers<T extends { x: number; y: number }>(
 ): T[] {
   'worklet';
 
-  const result = items.slice();
-  const cluster = new Array<number>(items.length).fill(-1);
-  const clusters: number[][] = [];
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const item of items) {
+    xs.push(item.x);
+    ys.push(item.y);
+  }
 
-  for (let i = 0; i < items.length; i += 1) {
-    if (cluster[i] !== -1) continue;
+  // Несколько проходов: раздвинув двоих, можно прижать третьего.
+  // Трёх хватает — на планете людей единицы, не сотни.
+  for (let pass = 0; pass < 3; pass += 1) {
+    for (let i = 0; i < items.length; i += 1) {
+      for (let j = i + 1; j < items.length; j += 1) {
+        let dx = xs[j]! - xs[i]!;
+        let dy = ys[j]! - ys[i]!;
+        let distance = Math.hypot(dx, dy);
 
-    const group = [i];
-    cluster[i] = clusters.length;
+        if (distance >= minGapPx) continue;
 
-    for (let j = i + 1; j < items.length; j += 1) {
-      if (cluster[j] !== -1) continue;
-      const distance = Math.hypot(items[j]!.x - items[i]!.x, items[j]!.y - items[i]!.y);
-      if (distance >= minGapPx) continue;
-      cluster[j] = clusters.length;
-      group.push(j);
+        if (distance < 0.0001) {
+          // Ровно одна точка: направление берём от номера метки, иначе
+          // оно зависело бы от порядка в списке и дрожало бы каждый кадр.
+          const angle = (2 * Math.PI * i) / Math.max(1, items.length);
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          distance = 1;
+        }
+
+        const push = (minGapPx - distance) / 2;
+        const ux = (dx / distance) * push;
+        const uy = (dy / distance) * push;
+
+        xs[i] = xs[i]! - ux;
+        ys[i] = ys[i]! - uy;
+        xs[j] = xs[j]! + ux;
+        ys[j] = ys[j]! + uy;
+      }
     }
-
-    clusters.push(group);
   }
 
-  for (const group of clusters) {
-    if (group.length < 2) continue;
-
-    const cx = group.reduce((sum, index) => sum + items[index]!.x, 0) / group.length;
-    const cy = group.reduce((sum, index) => sum + items[index]!.y, 0) / group.length;
-
-    group.forEach((index, position) => {
-      // Первая метка уходит вверх, остальные по часовой стрелке:
-      // так порядок не зависит от того, кто первым пришёл в список.
-      const angle = (2 * Math.PI * position) / group.length - Math.PI / 2;
-      result[index] = {
-        ...items[index]!,
-        x: cx + Math.cos(angle) * minGapPx,
-        y: cy + Math.sin(angle) * minGapPx,
-      };
-    });
+  const result: T[] = [];
+  for (let i = 0; i < items.length; i += 1) {
+    result.push({ ...items[i]!, x: xs[i]!, y: ys[i]! });
   }
-
   return result;
 }

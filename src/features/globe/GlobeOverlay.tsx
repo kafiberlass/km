@@ -29,6 +29,8 @@ import {
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
+  useFrameCallback,
+  useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
@@ -37,13 +39,15 @@ import { palette } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { isFresh, type Friend } from '@/features/friends/types';
 
-import { LAND_RINGS } from './land';
+import { LAND_UNITS } from './landUnits';
 import {
   globeMarkers,
   globeOpacity,
   globeScale,
+  globeTrig,
   graticule,
   projectGlobe,
+  projectUnit,
   spaceOpacity,
   spreadMarkers,
   type GlobeView,
@@ -62,6 +66,9 @@ const STAR_COUNT = 70;
  */
 const MARKER_GAP = 13;
 
+/** Какую долю пути до настоящего зума сглаженный проходит за кадр. */
+const SMOOTHING = 0.33;
+
 interface Props {
   camera: SharedValue<SharedCamera>;
   /** Куда повёрнут шар — центр карты на момент последней остановки. */
@@ -75,10 +82,11 @@ interface Props {
 }
 
 export function GlobeOverlay({ camera, center, me, friends, width, height }: Props) {
-  // Целое число градусов: при панорамировании карты шар доворачивается
-  // заметными шагами, но не пересобирается на каждый пиксель.
-  const lng0 = Math.round(center.lng);
-  const lat0 = Math.round(center.lat);
+  // Шаг доворота задаёт MapStack — он же решает, когда будить React.
+  // Округлять здесь второй раз нельзя: полуградусные шаги превратились бы
+  // обратно в целые, то есть ровно в те ступеньки, от которых уходили.
+  const lng0 = center.lng;
+  const lat0 = center.lat;
 
   // Диск отдельно от ориентации: при повороте планеты он не меняется,
   // и всё, что зависит только от него (звёзды), пересобирать незачем.
@@ -95,8 +103,11 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
 
   const land = useMemo(() => {
     const path = Skia.Path.Make();
+    // Синусы поворота считаются один раз на всю сушу, а сами точки
+    // лежат готовыми векторами: на кадр остаётся умножение.
+    const trig = globeTrig(view);
 
-    for (const ring of LAND_RINGS) {
+    for (const ring of LAND_UNITS) {
       // Один проход на кольцо, а не два. Раньше видимость проверялась
       // отдельным проходом через ringVisible, и вся суша проецировалась
       // дважды — при повороте планеты это ощутимо: 4700 точек на градус.
@@ -104,8 +115,8 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
       const xs: number[] = [];
       const ys: number[] = [];
 
-      for (let i = 0; i < ring.length; i += 2) {
-        const projected = projectGlobe(ring[i]!, ring[i + 1]!, view);
+      for (let i = 0; i < ring.length; i += 3) {
+        const projected = projectUnit(ring[i]!, ring[i + 1]!, ring[i + 2]!, trig, view);
         if (projected.front) front = true;
         xs.push(projected.x);
         ys.push(projected.y);
@@ -174,15 +185,38 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
     );
   }, [me, friends, view]);
 
+  /**
+   * Сглаженный зум — только для анимации перехода.
+   *
+   * Карта сообщает своё положение событиями, и приходят они неровно:
+   * то несколько за кадр, то ни одного, а на инерции после броска пальцем
+   * шаг между ними скачет. Привязанная к ним напрямую прозрачность
+   * дёргается вместе с ними. Здесь значение догоняет настоящий зум на
+   * каждом кадре — каждый раз на треть оставшегося расстояния, — и любая
+   * рваность превращается в ровное движение. Плата — около трёх кадров
+   * задержки, которых глаз не замечает.
+   *
+   * Туман и метки этим не пользуются намеренно: им положено совпадать
+   * с картой пиксель в пиксель, и отставание там было бы враньём.
+   */
+  const smoothZoom = useSharedValue(camera.value.zoom);
+
+  useFrameCallback(() => {
+    'worklet';
+    const target = camera.value.zoom;
+    const next = smoothZoom.value + (target - smoothZoom.value) * SMOOTHING;
+    smoothZoom.value = Math.abs(target - next) < 0.001 ? target : next;
+  });
+
   // Небо появляется первым и к началу проявления шара уже непрозрачно:
   // иначе сквозь материки просвечивают тайлы карты и две картинки
   // накладываются друг на друга.
-  const style = useAnimatedStyle(() => ({ opacity: spaceOpacity(camera.value.zoom) }));
+  const style = useAnimatedStyle(() => ({ opacity: spaceOpacity(smoothZoom.value) }));
 
   // Шар живёт своей анимацией внутри уже чёрного неба: проявляется
   // и подрастает. Оба значения считаются в UI-потоке каждый кадр.
-  const bodyOpacity = useDerivedValue(() => globeOpacity(camera.value.zoom));
-  const bodyTransform = useDerivedValue(() => [{ scale: globeScale(camera.value.zoom) }]);
+  const bodyOpacity = useDerivedValue(() => globeOpacity(smoothZoom.value));
+  const bodyTransform = useDerivedValue(() => [{ scale: globeScale(smoothZoom.value) }]);
 
   return (
     <Animated.View style={[styles.wrap, style]} pointerEvents="none">

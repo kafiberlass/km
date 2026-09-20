@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { LAND_RINGS } from '@/features/globe/land';
+import { LAND_UNITS } from '@/features/globe/landUnits';
 import {
   GLOBE_SCALE_FAR,
   GLOBE_SCALE_NEAR,
@@ -10,8 +11,11 @@ import {
   globeMarkers,
   globeOpacity,
   globeScale,
+  globeTrig,
   graticule,
   projectGlobe,
+  projectUnit,
+  unitOf,
   smoothstep,
   spreadMarkers,
   spaceOpacity,
@@ -192,6 +196,57 @@ describe('метки на планете', () => {
   });
 });
 
+describe('быстрая проекция', () => {
+  const view = { cx: 200, cy: 400, r: 160, lng0: 49, lat0: 55.8 };
+
+  /** Прямой счёт по определению ортографической проекции — как было раньше. */
+  function naive(lng: number, lat: number) {
+    const RAD = Math.PI / 180;
+    const phi = lat * RAD;
+    const phi0 = view.lat0 * RAD;
+    const d = (lng - view.lng0) * RAD;
+
+    const cosC = Math.sin(phi0) * Math.sin(phi) + Math.cos(phi0) * Math.cos(phi) * Math.cos(d);
+    let x = Math.cos(phi) * Math.sin(d);
+    let y = Math.cos(phi0) * Math.sin(phi) - Math.sin(phi0) * Math.cos(phi) * Math.cos(d);
+
+    const front = cosC >= 0;
+    if (!front) {
+      const len = Math.hypot(x, y);
+      if (len > 0) {
+        x /= len;
+        y /= len;
+      }
+    }
+    return { x: view.cx + x * view.r, y: view.cy - y * view.r, front };
+  }
+
+  it('совпадает с прямым счётом по всей планете', () => {
+    // Оптимизация вынесла синусы из точки наружу; если алгебра разъехалась,
+    // материки поедут, и заметно это будет уже на телефоне.
+    const trig = globeTrig(view);
+
+    for (let lng = -180; lng <= 180; lng += 17) {
+      for (let lat = -85; lat <= 85; lat += 11) {
+        const [a, b, c] = unitOf(lng, lat);
+        const fast = projectUnit(a, b, c, trig, view);
+        const slow = naive(lng, lat);
+
+        expect(fast.front).toBe(slow.front);
+        expect(fast.x).toBeCloseTo(slow.x, 9);
+        expect(fast.y).toBeCloseTo(slow.y, 9);
+      }
+    }
+  });
+
+  it('вся суша переведена в векторы — по три числа на точку', () => {
+    expect(LAND_UNITS.length).toBe(LAND_RINGS.length);
+    for (let i = 0; i < LAND_RINGS.length; i += 1) {
+      expect(LAND_UNITS[i]!.length).toBe((LAND_RINGS[i]!.length / 2) * 3);
+    }
+  });
+});
+
 describe('разведение слипшихся меток', () => {
   const GAP = 12;
 
@@ -204,8 +259,37 @@ describe('разведение слипшихся меток', () => {
   it('разведённые метки остаются вокруг общего места', () => {
     const spread = spreadMarkers([{ x: 100, y: 100 }, { x: 100, y: 100 }], GAP);
     for (const marker of spread) {
-      expect(Math.hypot(marker.x - 100, marker.y - 100)).toBeCloseTo(GAP, 6);
+      // Половина зазора каждой: вместе это ровно зазор, а не два.
+      expect(Math.hypot(marker.x - 100, marker.y - 100)).toBeCloseTo(GAP / 2, 6);
     }
+  });
+
+  it('метки не прыгают в тот момент, когда перестают быть слипшимися', () => {
+    // Ровно этим и была плохая анимация при приближении: пока метки
+    // считались слипшимися, их держали на одном расстоянии, а на границе
+    // отпускали — и они скачком съезжались.
+    const before = spreadMarkers([{ x: 100, y: 100 }, { x: 100 + GAP - 0.01, y: 100 }], GAP);
+    const after = spreadMarkers([{ x: 100, y: 100 }, { x: 100 + GAP + 0.01, y: 100 }], GAP);
+
+    for (let i = 0; i < before.length; i += 1) {
+      expect(before[i]!.x).toBeCloseTo(after[i]!.x, 1);
+      expect(before[i]!.y).toBeCloseTo(after[i]!.y, 1);
+    }
+  });
+
+  it('чем дальше метки друг от друга, тем меньше их двигают', () => {
+    const shift = (distance: number) => {
+      const spread = spreadMarkers([{ x: 100, y: 100 }, { x: 100 + distance, y: 100 }], GAP);
+      return Math.abs(spread[0]!.x - 100);
+    };
+
+    // Монотонно убывает до нуля: движение метки при приближении карты
+    // должно быть плавным, а не ступенчатым.
+    const shifts = [0, 2, 4, 6, 8, 10, GAP].map(shift);
+    for (let i = 1; i < shifts.length; i += 1) {
+      expect(shifts[i]!).toBeLessThanOrEqual(shifts[i - 1]! + 1e-9);
+    }
+    expect(shifts[shifts.length - 1]!).toBeCloseTo(0, 6);
   });
 
   it('далёкие метки не двигаются', () => {

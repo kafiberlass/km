@@ -9,7 +9,12 @@
 
 import React, { forwardRef, useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { runOnJS, useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
+import {
+  runOnJS,
+  useAnimatedReaction,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import type { CameraRef, ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
 
 import type { LngLat } from '@/core/geo/mercator';
@@ -27,11 +32,34 @@ import { GLOBE_ZOOM_NONE } from '@/features/globe/projection';
 import { MapCanvas } from './MapCanvas';
 
 /**
- * Запас над порогом появления планеты, на котором канвас глобуса уже
- * смонтирован. Прозрачность считается в UI-потоке каждый кадр, а сам
- * канвас появляется заранее — иначе шар возникал бы рывком в конце жеста.
+ * Окно, в котором канвас планеты живёт в дереве.
+ *
+ * Появление стоит дорого: 4700 точек суши, сетка, звёзды. Раньше канвас
+ * монтировался почти вплотную к порогу появления неба — то есть ровно
+ * в тот момент, когда начинается переход, и первый его кадр приходился
+ * на подготовку. Выглядело это как рывок в самом начале анимации.
+ *
+ * Поэтому порог отодвинут далеко вверх: к началу перехода всё давно
+ * готово. Вход и выход разведены (гистерезис) — иначе на дрожании зума
+ * у границы канвас монтировался бы и размонтировался по десять раз.
  */
-const MOUNT_MARGIN = 0.8;
+const MOUNT_IN = GLOBE_ZOOM_NONE + 2;
+const MOUNT_OUT = GLOBE_ZOOM_NONE + 2.6;
+
+/**
+ * Шаг доворота планеты, градусы.
+ *
+ * Полградуса на шаре в пол-экрана — примерно полтора пикселя: глазу
+ * это уже непрерывное движение. Раньше стоял целый градус, и вращение
+ * шло заметными ступеньками; теперь пересборка стоит вчетверо дешевле
+ * (точки суши заранее переведены в векторы), и шаг можно было уполовинить.
+ */
+const ROTATE_STEP = 0.5;
+
+function toStep(value: number): number {
+  'worklet';
+  return Math.round(value / ROTATE_STEP) * ROTATE_STEP;
+}
 
 interface Props {
   camera: SharedValue<SharedCamera>;
@@ -77,10 +105,20 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
   const [globeNear, setGlobeNear] = useState(false);
   const [globeCenter, setGlobeCenter] = useState<LngLat>(origin);
 
+  // Состояние монтирования живёт и в UI-потоке: реакция должна знать,
+  // смонтирован ли канвас сейчас, а до React ей не дотянуться.
+  const globeMounted = useSharedValue(false);
+
   useAnimatedReaction(
-    () => camera.value.zoom < GLOBE_ZOOM_NONE + MOUNT_MARGIN,
-    (near, previous) => {
-      if (near !== previous) runOnJS(setGlobeNear)(near);
+    () => camera.value.zoom,
+    (zoom) => {
+      if (!globeMounted.value && zoom < MOUNT_IN) {
+        globeMounted.value = true;
+        runOnJS(setGlobeNear)(true);
+      } else if (globeMounted.value && zoom > MOUNT_OUT) {
+        globeMounted.value = false;
+        runOnJS(setGlobeNear)(false);
+      }
     },
     [],
   );
@@ -90,13 +128,13 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
    *
    * Раньше поворот случался только на остановке карты, и на глобусе это
    * читалось как «шар не крутится»: тянешь — ничего, отпустил — рывок.
-   * Реакция живёт в UI-потоке и будит React только на целых градусах:
-   * мельче на шаре всё равно не видно, а пересборка геометрии стоит денег.
+   * Реакция живёт в UI-потоке и будит React шагами по полградуса:
+   * мельче на шаре не видно, а пересборка геометрии стоит денег.
    */
   useAnimatedReaction(
     () => {
-      if (camera.value.zoom >= GLOBE_ZOOM_NONE + MOUNT_MARGIN) return null;
-      return { lng: Math.round(camera.value.lng), lat: Math.round(camera.value.lat) };
+      if (camera.value.zoom >= MOUNT_IN) return null;
+      return { lng: toStep(camera.value.lng), lat: toStep(camera.value.lat) };
     },
     (next, previous) => {
       if (!next) return;

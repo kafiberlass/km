@@ -7,6 +7,7 @@ import { Link } from 'expo-router';
 import { resetDatabase } from '@/core/db/client';
 import { buildSnapshot, countCells, getProfile, unlockedAchievements } from '@/core/db/repo';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
+import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { Avatar } from '@/features/profile/Avatar';
@@ -84,6 +85,11 @@ export default function ProfileScreen() {
             value={(snapshot.totalDistanceM / 1000).toFixed(1)}
             label="км пройдено"
             color={palette.emberDeep}
+          />
+          <Tile
+            value={`≈${formatSteps(stepsFromMeters(snapshot.totalDistanceM))}`}
+            label="шагов"
+            color={palette.gold}
           />
           <Tile value={String(districtsDone)} label="кварталов" color={palette.teal} />
           <Tile value={String(streak)} label="дней подряд" color={palette.emberDeep} />
@@ -223,9 +229,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  tiles: { flexDirection: 'row', gap: spacing.sm },
+  // Сетка два на два: плиток стало четыре, а вчетвером в строке они
+  // сжимаются до нечитаемых.
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tile: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '47%',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,

@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getProfile, listWalks } from '@/core/db/repo';
+import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { deviceTimeZone } from '@/core/rules/streak';
 import {
   formatDistance,
@@ -95,6 +96,14 @@ export default function HistoryScreen() {
           <Stat label="ПРОГУЛОК" value={String(all.walks)} />
           <Stat label="В ПУТИ" value={formatDuration(all.durationS)} />
           <Stat label="КЛЕТОК" value={String(all.newCells)} />
+        </View>
+
+        {/* Шаги — приблизительные, считаются из расстояния: знак «≈»
+            стоит не для красоты. */}
+        <View style={styles.row}>
+          <Stat label="ШАГОВ · НЕДЕЛЯ" value={`≈ ${formatSteps(stepsFromMeters(week.distanceM))}`} />
+          <Stat label="ШАГОВ · МЕСЯЦ" value={`≈ ${formatSteps(stepsFromMeters(month.distanceM))}`} />
+          <Stat label="ШАГОВ · ВСЕГО" value={`≈ ${formatSteps(stepsFromMeters(all.distanceM))}`} />
         </View>
 
         {walks.length === 0 && (
