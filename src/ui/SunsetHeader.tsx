@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { fonts, palette, radii, spacing, sunsetBands } from '@/core/theme/tokens';
 import { Avatar } from '@/features/profile/Avatar';
@@ -61,7 +62,9 @@ export function SunsetHeader({
         </View>
 
         <View style={styles.streak}>
-          <Text style={styles.streakIcon}>🔥</Text>
+          {/* Рисованный огонь, а не эмодзи: эмодзи рисует система,
+              и он выпадает из шрифта и палитры всего остального. */}
+          <MaterialCommunityIcons name="fire" size={16} color={palette.gold} />
           <Text style={styles.streakValue}>{streakDays}</Text>
         </View>
       </View>
@@ -148,6 +151,5 @@ const styles = StyleSheet.create({
     borderColor: palette.ink,
     backgroundColor: '#3A2A1E',
   },
-  streakIcon: { fontSize: 14 },
   streakValue: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
 });

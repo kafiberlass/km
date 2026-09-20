@@ -287,7 +287,17 @@ function FriendCard({
   const target = friendTarget(friend);
 
   const open = () => {
-    if (!target) return;
+    // Нажатие обязано что-то делать. Мёртвая карточка выглядит как поломка:
+    // человек жмёт, ничего не происходит, и он идёт писать, что кнопка
+    // не работает — вместо того чтобы узнать, что показывать пока нечего.
+    if (!target) {
+      Alert.alert(
+        `Где ${friend.name}`,
+        'Пока негде показать: друг не делится позицией. Метка появится, когда он выйдет на прогулку или включит трансляцию у себя в приложении.',
+      );
+      return;
+    }
+
     router.push({
       pathname: '/map-full',
       params: { lng: String(target.lng), lat: String(target.lat), friend: friend.name },
@@ -298,8 +308,7 @@ function FriendCard({
     <View style={styles.card}>
       <Pressable
         onPress={open}
-        disabled={target == null}
-        style={({ pressed }) => [styles.head, pressed && target != null && styles.headPressed]}
+        style={({ pressed }) => [styles.head, pressed && styles.headPressed]}
         accessibilityRole="button"
         accessibilityLabel={
           target ? `Показать ${friend.name} на карте` : `${friend.name} не делится позицией`
@@ -331,10 +340,12 @@ function FriendCard({
         <View style={[styles.dot, fresh ? styles.dotLive : styles.dotStale]} />
 
         {/* Стрелка вместо подписи «нажми сюда»: она же показывает,
-            что карточка ведёт дальше. */}
-        {target != null && (
-          <Feather name="chevron-right" size={18} color={palette.textMuted} />
-        )}
+            что карточка ведёт дальше. Бледная — когда вести пока некуда. */}
+        <Feather
+          name="chevron-right"
+          size={18}
+          color={target != null ? palette.textMuted : palette.sand}
+        />
 
         <Pressable
           onPress={onRemove}
