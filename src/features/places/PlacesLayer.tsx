@@ -9,6 +9,11 @@
  * Название неоткрытого места не показывается: смысл механики в том, чтобы
  * дойти и узнать. Вид (парк, кафе, смотровая) видно сразу — по нему
  * и выбирают, куда идти.
+ *
+ * Исключение — достопримечательности. Прятать от человека, что вон там
+ * кремль, бессмысленно: он и так знает, что тот стоит. Название нужно
+ * ровно затем, зачем его и просили показывать, — чтобы выбрать, куда
+ * пойти сегодня.
  */
 
 import React, { useMemo } from 'react';
@@ -74,6 +79,7 @@ function PlaceMarker({
 }) {
   const kind = placeKind(place.type);
   const found = place.discoveredAt != null;
+  const named = found || place.type === 'landmark';
 
   const style = useAnimatedStyle(() => {
     const matrix = cameraMatrixWorklet(
@@ -121,7 +127,7 @@ function PlaceMarker({
 
       {/* Название — награда за то, что дошёл. До этого видно только вид. */}
       <Text style={found ? styles.title : styles.titleHidden} numberOfLines={1}>
-        {found ? place.title : `+${place.xpReward} XP`}
+        {named ? place.title : `+${place.xpReward} XP`}
       </Text>
     </Animated.View>
   );

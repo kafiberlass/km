@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { MAX_PLACES, buildOverpassQuery, parseOverpassPlaces } from '@/features/places/osm';
+import {
+  LOCAL_RADIUS_M,
+  MAX_PLACES,
+  buildOverpassQuery,
+  parseOverpassPlaces,
+} from '@/features/places/osm';
 
 const CENTER = { lat: 55.7963, lng: 49.1088 };
 
@@ -13,6 +18,30 @@ describe('запрос в Overpass', () => {
     expect(query).toContain('way["leisure"="park"]');
     // Без `out center` у контуров не будет координат вовсе.
     expect(query).toContain('out center');
+  });
+
+  it('спрашивает достопримечательности, а не только кафе и парки', () => {
+    const query = buildOverpassQuery(CENTER, 3000);
+
+    expect(query).toContain('node["tourism"="attraction"]');
+    expect(query).toContain('way["historic"="castle"]');
+    expect(query).toContain('node["amenity"="theatre"]');
+  });
+
+  it('храмы и старые здания спрашиваются только с отметкой в Викиданных', () => {
+    const query = buildOverpassQuery(CENTER, 3000);
+
+    expect(query).toContain('node["amenity"="place_of_worship"]["wikidata"]');
+    expect(query).toContain('way["historic"="building"]["wikidata"]');
+  });
+
+  it('на дальнем радиусе спрашиваются только достопримечательности', () => {
+    const query = buildOverpassQuery(CENTER, LOCAL_RADIUS_M * 5);
+
+    // За двадцать пять километров за кофе не ходят, а в кремль ездят.
+    expect(query).not.toContain('"cafe"');
+    expect(query).not.toContain('"park"');
+    expect(query).toContain('node["tourism"="attraction"]');
   });
 });
 
@@ -88,6 +117,53 @@ describe('разбор ответа', () => {
       })),
     };
     expect(parseOverpassPlaces(many, CENTER)).toHaveLength(MAX_PLACES);
+  });
+
+  it('достопримечательности не вытесняются ближними кафе', () => {
+    const many = {
+      elements: [
+        ...Array.from({ length: MAX_PLACES * 2 }, (_, index) => ({
+          type: 'node',
+          id: 100 + index,
+          lat: 55.7963 + index / 1_000_000,
+          lon: 49.1088,
+          tags: { amenity: 'cafe', name: `Кафе ${index}` },
+        })),
+        // Кремль на другом конце города: дальше всех, но идти хочется туда.
+        {
+          type: 'way',
+          id: 1,
+          center: { lat: 55.7989, lon: 49.1054 },
+          tags: { historic: 'castle', 'name:ru': 'Казанский кремль' },
+        },
+      ],
+    };
+
+    const places = parseOverpassPlaces(many, CENTER);
+    expect(places.map((place) => place.title)).toContain('Казанский кремль');
+  });
+
+  it('церковь без отметки в Викиданных не считается достопримечательностью', () => {
+    const worship = {
+      elements: [
+        {
+          type: 'way',
+          id: 20,
+          center: { lat: 55.7, lon: 49.1 },
+          tags: { amenity: 'place_of_worship', name: 'Храм у дороги' },
+        },
+        {
+          type: 'way',
+          id: 21,
+          center: { lat: 55.71, lon: 49.1 },
+          tags: { amenity: 'place_of_worship', name: 'Кул-Шариф', wikidata: 'Q1146524' },
+        },
+      ],
+    };
+
+    const places = parseOverpassPlaces(worship, CENTER);
+    expect(places.map((place) => place.title)).toEqual(['Кул-Шариф']);
+    expect(places[0]).toMatchObject({ type: 'landmark', xpReward: 100 });
   });
 
   it('мусор вместо ответа не роняет разбор', () => {

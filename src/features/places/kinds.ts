@@ -19,7 +19,10 @@ export interface PlaceKindStyle {
 export const PLACE_KINDS: Record<string, PlaceKindStyle> = {
   cafe: { icon: 'coffee', color: palette.ember, label: 'Кафе' },
   park: { icon: 'sun', color: palette.teal, label: 'Парк' },
-  viewpoint: { icon: 'eye', color: palette.rust, label: 'Достопримечательность' },
+  viewpoint: { icon: 'eye', color: palette.rust, label: 'Смотровая' },
+  // Звезда и золото: достопримечательности должны выделяться среди
+  // кафе и скверов с одного взгляда на карту.
+  landmark: { icon: 'star', color: palette.gold, label: 'Достопримечательность' },
 };
 
 export const FALLBACK_PLACE_KIND: PlaceKindStyle = {

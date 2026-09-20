@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -11,6 +11,20 @@ import { fetchNearbyPlaces } from '@/features/places/nearby';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
+
+/**
+ * Насколько далеко искать.
+ *
+ * Три километра — то, что можно обойти пешком за вечер: там и кафе, и
+ * скверы. Дальше остаются только достопримечательности, потому что за
+ * кофе через весь город никто не поедет, а в кремль — поедет. Двадцать
+ * пять покрывают город целиком с любой окраины.
+ */
+const RANGES: readonly { radiusM: number; label: string; hint: string }[] = [
+  { radiusM: 3000, label: '3 КМ', hint: 'Парки, кафе и достопримечательности в получасе ходьбы от дома.' },
+  { radiusM: 10000, label: '10 КМ', hint: 'Достопримечательности по своей части города — до многих можно дойти пешком.' },
+  { radiusM: 25000, label: '25 КМ', hint: 'Главные достопримечательности всего города, даже если вы живёте на окраине.' },
+];
 
 /** Цвет плитки закреплён за типом места — как в макете. */
 /** Метры до места: близкие — в метрах, дальние — в километрах. */
@@ -30,6 +44,8 @@ export default function PlacesScreen() {
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [rangeIndex, setRangeIndex] = useState(0);
+  const range = RANGES[rangeIndex]!;
 
   const places = useMemo(() => allPlaces(), [exploredCells, version, placesVersion]);
 
@@ -50,7 +66,7 @@ export default function PlacesScreen() {
     setBusy(true);
     setMessage(null);
 
-    const result = await fetchNearbyPlaces(origin);
+    const result = await fetchNearbyPlaces(origin, range.radiusM);
 
     if (result.status === 'ok') {
       upsertPlaces(result.places);
@@ -61,7 +77,9 @@ export default function PlacesScreen() {
       // Движок держит неоткрытые места в памяти: без этого новые не начнут
       // открываться до перезапуска приложения.
       refreshPlaces();
-      setMessage(`Нашёл ${result.places.length} мест в трёх километрах вокруг`);
+      setMessage(
+        `Нашёл ${result.places.length} мест в ${Math.round(range.radiusM / 1000)} км вокруг`,
+      );
     } else if (result.status === 'empty') {
       setMessage('Вокруг ничего не нашлось — редкий случай, но бывает за городом');
     } else if (result.status === 'busy') {
@@ -73,7 +91,7 @@ export default function PlacesScreen() {
     }
 
     setBusy(false);
-  }, [busy, origin?.lat, origin?.lng, refreshPlaces]);
+  }, [busy, origin?.lat, origin?.lng, range.radiusM, refreshPlaces]);
 
   return (
     <View style={styles.root}>
@@ -85,6 +103,26 @@ export default function PlacesScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.search}>
+          <View style={styles.ranges}>
+            {RANGES.map((item, index) => {
+              const active = index === rangeIndex;
+              return (
+                <Pressable
+                  key={item.radiusM}
+                  onPress={() => setRangeIndex(index)}
+                  disabled={busy}
+                  style={[styles.range, active && styles.rangeActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.rangeText, active && styles.rangeTextActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <ActionButton
             label={busy ? 'ИЩУ…' : 'НАЙТИ МЕСТА РЯДОМ'}
             onPress={() => void search()}
@@ -94,7 +132,7 @@ export default function PlacesScreen() {
           <Text style={styles.searchHint}>
             {origin == null
               ? 'Сначала нужна первая прогулка: без неё приложение не знает, где искать.'
-              : 'Парки, кафе и достопримечательности из OpenStreetMap в трёх километрах вокруг дома. Загружаются один раз и дальше работают без интернета.'}
+              : `${range.hint} Данные из OpenStreetMap: загружаются один раз и дальше работают без интернета.`}
           </Text>
           {message != null && <Text style={styles.searchMessage}>{message}</Text>}
         </View>
@@ -155,6 +193,25 @@ export default function PlacesScreen() {
 
 const styles = StyleSheet.create({
   search: { gap: spacing.sm, marginBottom: spacing.sm },
+  ranges: { flexDirection: 'row', gap: spacing.sm },
+  range: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.sand,
+    alignItems: 'center',
+  },
+  rangeActive: { backgroundColor: palette.gold },
+  rangeText: {
+    color: palette.textMuted,
+    fontFamily: fonts.display,
+    fontWeight: '900',
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  rangeTextActive: { color: palette.textDark },
   searchHint: { color: palette.textMuted, fontSize: 12, fontFamily: fonts.body },
   searchMessage: {
     color: palette.textDark,
