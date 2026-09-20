@@ -9,6 +9,7 @@
     "ios": "expo run:ios",
     "update": "bash scripts/update.sh",
     "build:android": "bash scripts/build-android.sh",
+    "apk": "bash scripts/get-apk.sh",
     "setup:ios": "bash scripts/setup-ios.sh",
     "setup:ios:release": "bash scripts/setup-ios.sh --release",
     "setup:ios:friend": "bash scripts/setup-ios.sh --release",
