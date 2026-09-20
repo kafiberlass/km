@@ -33,6 +33,8 @@ export interface Friend {
   initials: string;
   /** Цвет метки: у каждого друга свой, иначе на карте их не различить. */
   color: string;
+  /** «preset:…» или «photo:<адрес>». null — друг не выбирал аватарку. */
+  avatar: string | null;
   /** null — друг не делится позицией прямо сейчас. */
   position: FriendPosition | null;
   visits: FriendVisit[];
@@ -65,6 +67,8 @@ export interface FriendsProvider {
   removeFriend?(friendId: string): Promise<void>;
   /** Имя, под которым человека видят друзья. */
   setDisplayName?(name: string): Promise<void>;
+  /** Аватарка, которую видят друзья. Фотография сначала загружается. */
+  setAvatar?(value: string | null): Promise<string | null>;
 }
 
 /** Считается ли позиция актуальной. Старую метку показываем приглушённой. */

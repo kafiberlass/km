@@ -33,6 +33,7 @@ import {
   useFriends,
   type Friend,
 } from '@/features/friends';
+import { Avatar } from '@/features/profile/Avatar';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
@@ -304,9 +305,15 @@ function FriendCard({
           target ? `Показать ${friend.name} на карте` : `${friend.name} не делится позицией`
         }
       >
-        <View style={[styles.avatar, { backgroundColor: friend.color }, !fresh && styles.dim]}>
-          <Text style={styles.avatarText}>{friend.initials}</Text>
-        </View>
+        {friend.avatar ? (
+          <View style={[styles.photoRing, { borderColor: friend.color }, !fresh && styles.dim]}>
+            <Avatar value={friend.avatar} size={40} name={friend.name} />
+          </View>
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: friend.color }, !fresh && styles.dim]}>
+            <Text style={styles.avatarText}>{friend.initials}</Text>
+          </View>
+        )}
 
         <View style={styles.headBody}>
           <Text style={styles.name}>{friend.name.toUpperCase()}</Text>
@@ -380,6 +387,15 @@ const styles = StyleSheet.create({
   shareBody: { flex: 1, gap: spacing.xs },
   headPressed: { opacity: 0.7 },
   headBody: { flex: 1, gap: 2 },
+  photoRing: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   avatar: {
     width: 46,
     height: 46,

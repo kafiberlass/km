@@ -29,6 +29,7 @@ import { fonts, palette } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { isFresh, type Friend } from '@/features/friends/types';
 import { spreadMarkers } from '@/features/globe/projection';
+import { Avatar } from '@/features/profile/Avatar';
 
 const AVATAR = 40;
 const HALO = 34;
@@ -50,6 +51,8 @@ interface Person {
   color: string;
   initials: string;
   name: string;
+  /** Аватарка друга, если он её выбрал. Своя метка — точка, ей не нужна. */
+  avatar: string | null;
 }
 
 interface Props {
@@ -68,7 +71,16 @@ export function PeopleLayer({ me, friends, origin, camera, width, height, tracki
 
   const people = useMemo<Person[]>(() => {
     const list: Person[] = [
-      { key: 'me', point: me, self: true, live: true, color: palette.ember, initials: '', name: '' },
+      {
+        key: 'me',
+        point: me,
+        self: true,
+        live: true,
+        color: palette.ember,
+        initials: '',
+        name: '',
+        avatar: null,
+      },
     ];
 
     for (const friend of friends) {
@@ -81,6 +93,7 @@ export function PeopleLayer({ me, friends, origin, camera, width, height, tracki
         color: friend.color,
         initials: friend.initials,
         name: friend.name,
+        avatar: friend.avatar,
       });
     }
 
@@ -172,10 +185,18 @@ function PersonMarker({
 
   return (
     <Animated.View style={[styles.marker, style]}>
-      <View
-        style={[styles.avatar, { backgroundColor: person.color }, !person.live && styles.stale]}
-      >
-        <Text style={styles.avatarText}>{person.initials}</Text>
+      <View style={[styles.avatarWrap, !person.live && styles.stale]}>
+        {person.avatar ? (
+          // Рамку цвета друга оставляем и под фотографией: по ней метки
+          // различаются на карте, когда лиц ещё не разглядеть.
+          <View style={[styles.photoRing, { borderColor: person.color }]}>
+            <Avatar value={person.avatar} size={AVATAR - 6} name={person.name} />
+          </View>
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: person.color }]}>
+            <Text style={styles.avatarText}>{person.initials}</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.name} numberOfLines={1}>
         {person.name}
@@ -218,6 +239,17 @@ const styles = StyleSheet.create({
     backgroundColor: palette.ember,
   },
 
+  avatarWrap: { width: AVATAR, height: AVATAR },
+  // Кружок под фотографию: сама она круглая, а рамка добавляет цвет друга.
+  photoRing: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   avatar: {
     width: AVATAR,
     height: AVATAR,

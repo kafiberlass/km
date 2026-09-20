@@ -77,17 +77,22 @@ export default function ProfileEditScreen() {
     setBusy(true);
     setMessage(null);
 
-    // Сначала своё: имя должно сохраниться, даже если сети нет.
+    // Сначала своё: имя и аватарка должны сохраниться, даже если сети нет.
     saveIdentity(trimmed.length > 0 ? trimmed : null, avatar);
 
-    if (trimmed.length > 0 && isServerConfigured()) {
+    if (isServerConfigured()) {
       const provider = createFriendsProvider(origin);
       try {
-        await provider.setDisplayName?.(trimmed);
+        if (trimmed.length > 0) await provider.setDisplayName?.(trimmed);
+
+        // У себя остаётся локальный файл: своя аватарка должна рисоваться
+        // и без интернета. На сервер уходит адрес загруженной копии —
+        // этим занимается сам провайдер.
+        await provider.setAvatar?.(avatar);
       } catch {
         setBusy(false);
         setMessage({
-          text: 'Сохранил на телефоне, но друзьям имя не ушло — нет связи с сервером',
+          text: 'Сохранил на телефоне, но друзьям не ушло — нет связи с сервером',
           ok: false,
         });
         return;

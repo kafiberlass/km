@@ -18,6 +18,8 @@ interface Orbit {
   name: string;
   initials: string;
   color: string;
+  /** Один демо-друг оставлен без аватарки: так видно запасной вид с инициалами. */
+  avatar?: string;
   /** Радиус круга в градусах широты — примерно 111 км на градус. */
   radiusDeg: number;
   /** Полный оборот за столько миллисекунд. */
@@ -45,6 +47,7 @@ const ORBITS: readonly Orbit[] = [
     name: 'Марат',
     initials: 'МГ',
     color: palette.teal,
+    avatar: 'preset:compass',
     radiusDeg: 0.0065,
     periodMs: 140_000,
     phase: 2.1,
@@ -57,6 +60,7 @@ const ORBITS: readonly Orbit[] = [
     name: 'Даша',
     initials: 'ДС',
     color: palette.gold,
+    avatar: 'preset:coffee',
     radiusDeg: 0.0028,
     periodMs: 60_000,
     phase: 4.0,
@@ -78,6 +82,7 @@ function buildFriends(origin: LngLat, at: number): Friend[] {
       id: orbit.id,
       name: orbit.name,
       initials: orbit.initials,
+      avatar: orbit.avatar ?? null,
       color: orbit.color,
       position: {
         lat: origin.lat + orbit.radiusDeg * Math.sin(angle),
@@ -119,6 +124,10 @@ export class MockFriendsProvider implements FriendsProvider {
 
   setDisplayName(): Promise<void> {
     return Promise.resolve();
+  }
+
+  setAvatar(value: string | null): Promise<string | null> {
+    return Promise.resolve(value);
   }
 
   removeFriend(): Promise<void> {

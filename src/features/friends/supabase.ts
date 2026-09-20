@@ -18,7 +18,14 @@ import type { LngLat } from '@/core/geo/mercator';
 import { palette } from '@/core/theme/tokens';
 
 import { serverConfig } from './config';
+import { File } from 'expo-file-system';
+
+import { getValue, setValue } from '@/core/db/kv';
+
+import { avatarFileName, planAvatarSync } from './avatarSync';
 import { friendIdsFrom, type FriendshipRow } from './links';
+
+const UPLOADED_AVATAR_KEY = 'avatar-uploaded';
 import { sqliteSessionStorage } from './sessionStorage';
 import type { Friend, FriendsProvider, FriendVisit } from './types';
 
@@ -43,6 +50,7 @@ function initialsOf(name: string, id: string): string {
 interface ProfileRow {
   id: string;
   display_name: string | null;
+  avatar: string | null;
 }
 interface PositionRow {
   user_id: string;
@@ -135,7 +143,7 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     // Три запроса вместо джойна: политики доступа всё равно отсекут чужое,
     // а так проще читать и проще переносить на любой другой бэкенд.
     const [profiles, positions, visits] = await Promise.all([
-      this.client.from('profiles').select('id, display_name').in('id', ids),
+      this.client.from('profiles').select('id, display_name, avatar').in('id', ids),
       this.client.from('positions').select('user_id, lat, lng, updated_at').in('user_id', ids),
       this.client
         .from('place_visits')
@@ -158,6 +166,7 @@ export class SupabaseFriendsProvider implements FriendsProvider {
         name,
         initials: initialsOf(name, friendId),
         color: colorFor(friendId),
+        avatar: profile?.avatar ?? null,
         position: position
           ? { lat: position.lat, lng: position.lng, updatedAt: Date.parse(position.updated_at) }
           : null,
@@ -262,6 +271,60 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     this.refresh();
   }
 
+  /**
+   * Аватарка, которую увидят друзья.
+   *
+   * Готовый значок — это строка, её достаточно записать. Фотография лежит
+   * файлом на телефоне, и ссылка на локальный файл друзьям бесполезна:
+   * сначала загружаем её в хранилище, а в профиль пишем адрес.
+   *
+   * У себя при этом остаётся локальный файл, а не адрес: своя аватарка
+   * должна рисоваться и без интернета, мгновенно. Чтобы один и тот же файл
+   * не уезжал при каждом сохранении профиля, запоминаем, что уже загружено.
+   */
+  async setAvatar(value: string | null): Promise<string | null> {
+    const userId = await this.ensureSession();
+    if (!userId) return value;
+
+    const plan = planAvatarSync(value);
+    let stored = plan.kind === 'store' ? plan.value : null;
+
+    if (plan.kind === 'upload') {
+      // Этот же файл мог уехать в прошлый раз: сохранение профиля бывает
+      // чаще, чем смена фотографии, а мегабайт по мобильной связи дорог.
+      const remembered = uploadedAvatar();
+      if (remembered?.local === plan.uri) {
+        stored = remembered.url;
+      } else {
+        const file = new File(plan.uri);
+        if (!file.exists) return value;
+
+        const name = avatarFileName(userId);
+        const upload = await this.client.storage
+          .from('avatars')
+          .upload(name, file.bytesSync(), { contentType: 'image/jpeg', upsert: true });
+
+        if (upload.error) throw new Error(upload.error.message);
+
+        const { data } = this.client.storage.from('avatars').getPublicUrl(name);
+        // Отметка времени в адресе: без неё телефон друга покажет прежнюю
+        // картинку из кеша, сколько её ни меняй.
+        stored = `photo:${data.publicUrl}?v=${Date.now()}`;
+        rememberUploadedAvatar(plan.uri, stored);
+      }
+    }
+
+    const { error } = await this.client
+      .from('profiles')
+      .update({ avatar: stored })
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+
+    this.refresh();
+    return stored;
+  }
+
   /** Код, который диктуют другу. */
   async inviteCode(): Promise<string | null> {
     const userId = await this.ensureSession();
@@ -323,6 +386,24 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     this.refresh();
   }
 
+}
+
+/** Что уже загружено: локальный файл и его адрес в хранилище. */
+function uploadedAvatar(): { local: string; url: string } | null {
+  try {
+    const raw = getValue(UPLOADED_AVATAR_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { local?: unknown; url?: unknown };
+    return typeof parsed.local === 'string' && typeof parsed.url === 'string'
+      ? { local: parsed.local, url: parsed.url }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberUploadedAvatar(local: string, url: string): void {
+  setValue(UPLOADED_AVATAR_KEY, JSON.stringify({ local, url }));
 }
 
 export function createSupabaseProvider(): SupabaseFriendsProvider | null {
