@@ -8,6 +8,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "backgroundColor": "#2E1F17",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.kafiberlass.km",
@@ -20,7 +21,10 @@
     },
     "android": {
       "package": "com.kafiberlass.km",
-      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2E1F17"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -54,7 +58,12 @@
       ],
       [
         "expo-splash-screen",
-        { "backgroundColor": "#2E1F17", "resizeMode": "contain" }
+        {
+          "backgroundColor": "#2E1F17",
+          "resizeMode": "contain",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
       ]
     ],
     "experiments": { "typedRoutes": true }
