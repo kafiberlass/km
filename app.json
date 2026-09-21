@@ -40,7 +40,8 @@
         "FOREGROUND_SERVICE_LOCATION",
         "ACTIVITY_RECOGNITION",
         "POST_NOTIFICATIONS",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED"
       ]
     },
     "plugins": [
