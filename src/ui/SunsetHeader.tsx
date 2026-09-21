@@ -10,11 +10,13 @@
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { fonts, palette, radii, shadow, spacing, skyBands } from '@/core/theme/tokens';
 import { Avatar } from '@/features/profile/Avatar';
+import { Droplets } from './Droplets';
+import { GrassLine } from './GrassLine';
 
 interface Props {
   level: number;
@@ -42,6 +44,8 @@ export function SunsetHeader({
   streakDays,
   topInset = 0,
 }: Props) {
+  const { width } = useWindowDimensions();
+
   return (
     <View style={[styles.root, { minHeight: topInset + MIN_BODY_HEIGHT }]}>
       <View style={styles.bands}>
@@ -51,7 +55,14 @@ export function SunsetHeader({
         {/* Солнце: круг, наполовину утопленный за горизонт. */}
         <View style={styles.sun} />
         <View style={styles.horizon} />
+
+        {/* Трава по нижней кромке — та самая линия горизонта из макета. */}
+        <GrassLine width={width} />
       </View>
+
+      {/* Капли на стекле шапки. На карте их не бывает: там капля читалась
+          бы как метка, то есть как место, до которого можно дойти. */}
+      <Droplets count={6} seed={3} opacity={0.9} />
 
       <View style={[styles.content, { paddingTop: topInset + spacing.sm }]}>
         {/* Свой аватар, а не буквы «КМ»: это экран человека, а не витрина

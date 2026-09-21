@@ -11,10 +11,12 @@
  */
 
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { fonts, line, palette, skyBands, spacing } from '@/core/theme/tokens';
+import { Droplets } from './Droplets';
+import { GrassLine } from './GrassLine';
 
 interface Props {
   title: string;
@@ -31,6 +33,7 @@ interface Props {
 
 export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Props) {
   const centered = avatar != null;
+  const { width } = useWindowDimensions();
 
   return (
     <View style={[styles.root, { paddingTop: topInset + spacing.sm }]}>
@@ -39,6 +42,9 @@ export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Pro
           <View key={color} style={[styles.band, { backgroundColor: color }]} />
         ))}
         {centered && <View style={styles.sun} />}
+
+        {/* Линия горизонта из травы — та же, что и на главном экране. */}
+        <GrassLine width={width} height={14} />
       </View>
 
       {onClose != null && (
@@ -57,6 +63,10 @@ export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Pro
         </Pressable>
       )}
 
+      {/* Капли на стекле шапки. На карте их не бывает: там капля читалась
+          бы как метка, то есть как место, до которого можно дойти. */}
+      <Droplets count={5} seed={7} opacity={0.85} />
+
       <View style={[styles.content, centered && styles.contentCentered]}>
         {avatar}
         <Text style={[styles.title, centered && styles.centeredText]} numberOfLines={1}>
@@ -74,9 +84,9 @@ export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Pro
 
 const styles = StyleSheet.create({
   root: {
-    borderBottomWidth: 4,
-    borderBottomColor: palette.ink,
-    backgroundColor: palette.plum,
+    borderBottomWidth: line,
+    borderBottomColor: palette.edge,
+    backgroundColor: palette.bark,
     overflow: 'hidden',
   },
   // Полосы делят шапку поровну: так закат заполняет её целиком при любой
@@ -116,22 +126,22 @@ const styles = StyleSheet.create({
   closePressed: { opacity: 0.8 },
   centeredText: { textAlign: 'center' },
   title: {
-    color: palette.parchmentBright,
+    color: palette.textDark,
     fontSize: 24,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
-    textShadowColor: 'rgba(6, 51, 79, 0.35)',
+    textShadowColor: 'rgba(255, 255, 255, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
   subtitle: {
     fontFamily: fonts.body,
-    color: palette.parchment,
+    color: palette.textMuted,
     fontSize: 12,
     letterSpacing: 1.5,
     fontVariant: ['tabular-nums'],
-    textShadowColor: 'rgba(6, 51, 79, 0.3)',
+    textShadowColor: 'rgba(255, 255, 255, 0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
