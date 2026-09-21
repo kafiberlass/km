@@ -18,8 +18,10 @@ import {
   Blur,
   Canvas,
   Group,
+  LinearGradient,
   Path,
   Rect,
+  vec,
 } from '@shopify/react-native-skia';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
@@ -80,7 +82,15 @@ export function FogLayer({
         из всего содержимого канваса, а не только из заливки тумана.
       */}
       <Group layer>
-        <Rect x={0} y={0} width={width} height={height} color={palette.fog} />
+        {/* Туман — не плоская заливка: к низу он глубже, как толща воды. */}
+        <Rect x={0} y={0} width={width} height={height}>
+          <LinearGradient
+            start={vec(0, 0)}
+            end={vec(0, height)}
+            colors={[palette.fogTop, palette.fog, palette.fogDeep]}
+            positions={[0, 0.55, 1]}
+          />
+        </Rect>
 
         <Group blendMode="dstOut" matrix={matrix}>
           {/* Размытие в экранных пикселях — край тумана одинаково мягкий на любом зуме. */}
@@ -98,15 +108,27 @@ export function FogLayer({
 
       {showTrail && (
         <Group matrix={matrix}>
+          {/*
+            Тропа в два прохода: широкое мягкое свечение и яркое ядро поверх.
+            Ровно так она нарисована в макете — свет и есть награда за километры.
+          */}
           <Path
             path={geometry.trail}
             style="stroke"
             /* Ширина в метрах Меркатора: тропа всегда занимает ту же долю коридора. */
-            strokeWidth={geometry.revealStrokeMerc * 0.28}
+            strokeWidth={geometry.revealStrokeMerc * 0.42}
             strokeCap="round"
             strokeJoin="round"
-            color={palette.ember}
-            opacity={0.9}
+            color={palette.trailGlow}
+            opacity={0.55}
+          />
+          <Path
+            path={geometry.trail}
+            style="stroke"
+            strokeWidth={geometry.revealStrokeMerc * 0.16}
+            strokeCap="round"
+            strokeJoin="round"
+            color={palette.trailCore}
           />
         </Group>
       )}

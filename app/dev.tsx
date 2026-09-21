@@ -153,20 +153,20 @@ export default function DevScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: palette.fog },
+  root: { flex: 1, backgroundColor: palette.fogDeep },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
-  heading: { color: palette.textOnDark, fontSize: 24, fontWeight: '900', letterSpacing: 2 },
-  subheading: { color: palette.parchment, marginBottom: spacing.sm },
+  heading: { color: palette.white, fontSize: 24, fontWeight: '900', letterSpacing: 2 },
+  subheading: { color: palette.textOnDarkMuted, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   logBox: {
     marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 3,
-    borderColor: palette.ink,
-    backgroundColor: palette.ink,
+    borderWidth: 1,
+    borderColor: palette.darkGlassEdge,
+    backgroundColor: palette.fog,
     gap: 4,
   },
-  logEmpty: { color: palette.textMuted },
-  logLine: { color: palette.parchment, fontSize: 11, fontFamily: 'monospace' },
+  logEmpty: { color: palette.textOnDarkMuted },
+  logLine: { color: palette.textOnDark, fontSize: 11, fontFamily: 'monospace' },
 });

@@ -40,7 +40,7 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={palette.ember} />
+        <ActivityIndicator color={palette.white} />
       </View>
     );
   }
@@ -59,14 +59,14 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: palette.fog },
+  root: { flex: 1, backgroundColor: palette.skyMid },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: palette.fog,
+    backgroundColor: palette.skyMid,
   },
-  errorTitle: { color: palette.textOnDark, fontWeight: '900', fontSize: 18, marginBottom: 8 },
-  errorBody: { color: palette.parchment, textAlign: 'center' },
+  errorTitle: { color: palette.white, fontWeight: '900', fontSize: 18, marginBottom: 8 },
+  errorBody: { color: palette.textOnDark, textAlign: 'center' },
 });

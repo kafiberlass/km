@@ -1,7 +1,10 @@
 /**
- * Стиль карты под макет: тёмно-коричневая земля, бирюзовая сетка улиц,
- * без подписей. Подписи выключены сознательно — в макете их нет, и они
- * ломали бы ощущение «неизведанной территории».
+ * Стиль карты под Frutiger Aero: аквамариновая земля, светящиеся улицы,
+ * лаймовые парки, бирюзовая вода. Подписи выключены сознательно — в макете
+ * их нет, и они ломали бы ощущение «неизведанной территории».
+ *
+ * Карта светлая и насыщенная нарочно: поверх неё ложится тёмный туман,
+ * и весь эффект строится на контрасте «открытое светится / закрытое нет».
  *
  * Источник тайлов — OpenFreeMap (схема OpenMapTiles), бесплатно и без ключа.
  * Когда понадобится независимость — планета собирается planetiler'ом
@@ -21,7 +24,7 @@ export const ATTRIBUTION = '© OpenStreetMap contributors';
 export function buildMapStyle(): StyleSpecification {
   return {
     version: 8,
-    name: 'km-retro',
+    name: 'km-aero',
     sources: {
       omt: {
         type: 'vector',
@@ -33,7 +36,7 @@ export function buildMapStyle(): StyleSpecification {
       {
         id: 'background',
         type: 'background',
-        paint: { 'background-color': palette.fogSoft },
+        paint: { 'background-color': palette.land },
       },
       {
         id: 'landcover',
@@ -41,21 +44,21 @@ export function buildMapStyle(): StyleSpecification {
         source: 'omt',
         'source-layer': 'landcover',
         filter: ['in', 'class', 'wood', 'grass', 'farmland'],
-        paint: { 'fill-color': '#33372A', 'fill-opacity': 0.55 },
+        paint: { 'fill-color': palette.park, 'fill-opacity': 0.7 },
       },
       {
         id: 'park',
         type: 'fill',
         source: 'omt',
         'source-layer': 'park',
-        paint: { 'fill-color': '#2F4034', 'fill-opacity': 0.6 },
+        paint: { 'fill-color': palette.park, 'fill-opacity': 0.8 },
       },
       {
         id: 'water',
         type: 'fill',
         source: 'omt',
         'source-layer': 'water',
-        paint: { 'fill-color': '#1D3A3A' },
+        paint: { 'fill-color': palette.water },
       },
       {
         id: 'building',
@@ -63,7 +66,7 @@ export function buildMapStyle(): StyleSpecification {
         source: 'omt',
         'source-layer': 'building',
         minzoom: 14,
-        paint: { 'fill-color': palette.ink, 'fill-opacity': 0.45 },
+        paint: { 'fill-color': palette.building, 'fill-opacity': 0.5 },
       },
       {
         id: 'road-minor',
@@ -74,8 +77,8 @@ export function buildMapStyle(): StyleSpecification {
         minzoom: 13,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': palette.teal,
-          'line-opacity': 0.45,
+          'line-color': palette.street,
+          'line-opacity': 0.5,
           'line-width': ['interpolate', ['exponential', 1.4], ['zoom'], 13, 0.4, 18, 3],
         },
       },
@@ -87,8 +90,8 @@ export function buildMapStyle(): StyleSpecification {
         filter: ['in', 'class', 'motorway', 'trunk', 'primary', 'secondary', 'tertiary'],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': palette.tealBright,
-          'line-opacity': 0.7,
+          'line-color': palette.streetMajor,
+          'line-opacity': 0.72,
           'line-width': ['interpolate', ['exponential', 1.4], ['zoom'], 10, 0.6, 18, 6],
         },
       },

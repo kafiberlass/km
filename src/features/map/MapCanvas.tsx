@@ -79,7 +79,7 @@ export const MapCanvas = forwardRef<CameraRef, MapCanvasProps>(function MapCanva
         scaleBar={false}
         attribution
         attributionPosition={{ bottom: 8, right: 8 }}
-        tintColor={palette.parchment}
+        tintColor={palette.textOnDark}
         onRegionWillChange={syncCamera}
         onRegionIsChanging={syncCamera}
         onRegionDidChange={handleIdle}
@@ -98,5 +98,5 @@ export const MapCanvas = forwardRef<CameraRef, MapCanvasProps>(function MapCanva
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: palette.fog },
+  container: { flex: 1, backgroundColor: palette.land },
 });

@@ -5,9 +5,9 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "km",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "backgroundColor": "#2E1F17",
+    "backgroundColor": "#0B6FA6",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.example.km",
@@ -46,7 +46,7 @@
       ],
       [
         "expo-splash-screen",
-        { "backgroundColor": "#2E1F17", "resizeMode": "contain" }
+        { "backgroundColor": "#0B6FA6", "resizeMode": "contain" }
       ]
     ],
     "experiments": { "typedRoutes": true }
