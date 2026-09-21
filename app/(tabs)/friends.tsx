@@ -216,6 +216,7 @@ export default function FriendsScreen() {
             key={friend.id}
             friend={friend}
             origin={origin}
+            from={myPoint ?? origin}
             onRemove={() => remove(friend)}
           />
         ))}
@@ -282,10 +283,18 @@ function friendTarget(friend: Friend): { lat: number; lng: number } | null {
 function FriendCard({
   friend,
   origin,
+  from,
   onRemove,
 }: {
   friend: Friend;
   origin: { lat: number; lng: number };
+  /**
+   * Откуда считать расстояние до друга: там, где человек сейчас.
+   *
+   * Раньше считалось от дома, и в поездке карточка сообщала, что друг
+   * в тысяче километров, когда он стоял через дорогу.
+   */
+  from: { lat: number; lng: number };
   onRemove: () => void;
 }) {
   const position = friend.position;
@@ -335,7 +344,7 @@ function FriendCard({
           <Text style={styles.status}>
             {position == null
               ? 'НЕ ДЕЛИТСЯ ПОЗИЦИЕЙ'
-              : `${formatDistance(haversineMeters(origin, position))} ОТ ТЕБЯ · ${timeAgo(
+              : `${formatDistance(haversineMeters(from, position))} ОТ ТЕБЯ · ${timeAgo(
                   position.updatedAt,
                 ).toUpperCase()}`}
           </Text>

@@ -6,7 +6,7 @@
  * Карта и туман синхронизируются через SharedValue камеры, без setState.
  */
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
@@ -23,6 +23,7 @@ import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { isServerConfigured, useFriends } from '@/features/friends';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
+import { isAwayFromHome } from '@/features/map/awayFromHome';
 import { MapStack } from '@/features/map/MapStack';
 import { QuestCard } from '@/features/quests/QuestCard';
 import { useQuest } from '@/features/quests/useQuest';
@@ -101,6 +102,28 @@ export default function MapScreen() {
   // метку в примерном месте, чем не показать вовсе.
   const { point: knownPoint, locate } = useMyPosition();
   const myPoint = livePoint ?? knownPoint ?? origin;
+
+  /*
+    Уехал из города — карта не должна открываться на пустом дворе за
+    тысячу километров. Точку отсчёта при этом не трогаем: на ней держится
+    весь туман, меняется только то, куда смотрит камера.
+
+    Один раз за открытие экрана: дальше человек двигает карту сам, и
+    отнимать её у него — худшее, что можно сделать.
+    */
+  const jumped = useRef(false);
+
+  useEffect(() => {
+    if (jumped.current) return;
+    if (!isAwayFromHome(origin, knownPoint)) return;
+
+    jumped.current = true;
+    cameraRef.current?.flyTo({
+      center: [knownPoint!.lng, knownPoint!.lat],
+      zoom: CLOSE_ZOOM,
+      duration: 0,
+    });
+  }, [knownPoint, origin.lat, origin.lng]);
 
   // Прогресс квартала, в котором человек стоит прямо сейчас. Это и есть
   // ответ на «сколько осталось» — в отличие от процента по всему району.
