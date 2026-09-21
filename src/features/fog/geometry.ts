@@ -21,6 +21,8 @@ import {
 } from '@/core/geo/mercator';
 import type { TrackSegment } from '@/core/db/repo';
 
+import { DEFAULT_CRITTERS, pickCritters, type CritterSpot } from './critters';
+
 export interface RevealCircle extends LngLat {
   radiusM: number;
 }
@@ -30,6 +32,8 @@ export interface FogGeometry {
   reveal: SkPath;
   /** Тот же путь для декоративной оранжевой линии поверх. */
   trail: SkPath;
+  /** Рыбки и трава по кромке раскрытого. Сам выбор мест — в critters.ts. */
+  critters: CritterSpot[];
   /** Радиус раскрытия в метрах Меркатора — им задаётся strokeWidth маски. */
   revealStrokeMerc: number;
   pointCount: number;
@@ -59,8 +63,19 @@ export function buildFogGeometry(
   let pointCount = 0;
   let segmentCount = 0;
 
+  // Спроецированные точки собираем попутно: по ним расставляется живность,
+  // и второй проход по всей истории ради этого был бы расточительством.
+  const walked: { x: number; y: number }[] = [];
+
   for (const segment of segments) {
-    const added = appendSegment(reveal, trail, segment.points, projector, options.simplifyMerc ?? 0);
+    const added = appendSegment(
+      reveal,
+      trail,
+      segment.points,
+      projector,
+      options.simplifyMerc ?? 0,
+      walked,
+    );
     if (added > 0) {
       pointCount += added;
       segmentCount += 1;
@@ -74,10 +89,15 @@ export function buildFogGeometry(
     reveal.addCircle(p.x, p.y, r);
   }
 
+  const revealStrokeMerc = groundMetersToMercatorMeters(options.revealRadiusM, origin.lat) * 2;
+
   return {
     reveal,
     trail,
-    revealStrokeMerc: groundMetersToMercatorMeters(options.revealRadiusM, origin.lat) * 2,
+    // Разброс — от ширины коридора: живность держится его кромки,
+    // а не расползается по всей карте.
+    critters: pickCritters(walked, { ...DEFAULT_CRITTERS, spread: revealStrokeMerc * 0.42 }),
+    revealStrokeMerc,
     pointCount,
     segmentCount,
   };
@@ -89,6 +109,7 @@ function appendSegment(
   points: readonly LngLat[],
   projector: Projector,
   simplifyMerc: number,
+  walked: { x: number; y: number }[],
 ): number {
   if (points.length === 0) return 0;
 
@@ -102,6 +123,7 @@ function appendSegment(
     if (added === 0) {
       reveal.moveTo(x, y);
       trail.moveTo(x, y);
+      walked.push({ x, y });
       lastX = x;
       lastY = y;
       added = 1;
@@ -112,6 +134,7 @@ function appendSegment(
 
     reveal.lineTo(x, y);
     trail.lineTo(x, y);
+    walked.push({ x, y });
     lastX = x;
     lastY = y;
     added += 1;

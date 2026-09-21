@@ -31,6 +31,7 @@ import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
 import { cameraMatrixWorklet, lngLatToMercator, type LngLat } from '@/core/geo/mercator';
 import { palette, theme } from '@/core/theme/tokens';
+import { Critters } from './Critters';
 import type { FogGeometry } from './geometry';
 
 /** Камера в SharedValue — обновляется из обработчика MapLibre без setState. */
@@ -106,6 +107,13 @@ export function FogLayer({
       >
         <Rect x={0} y={0} width={width} height={height} color={palette.fogVeil} />
       </Mask>
+
+      {/* Живность — поверх тумана, но привязана к земле той же матрицей.
+          Цветная стоит внутри раскрытого коридора и потому видна; та,
+          что в тумане, нарочно оставлена силуэтом. */}
+      <Group matrix={matrix}>
+        <Critters spots={geometry.critters} scaleMerc={geometry.revealStrokeMerc} />
+      </Group>
 
       {showTrail && (
         <Group matrix={matrix}>
