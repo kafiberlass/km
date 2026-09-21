@@ -14,7 +14,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, palette, spacing, sunsetBands } from '@/core/theme/tokens';
+import { fonts, palette, spacing, skyBands } from '@/core/theme/tokens';
 
 interface Props {
   title: string;
@@ -35,7 +35,7 @@ export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Pro
   return (
     <View style={[styles.root, { paddingTop: topInset + spacing.sm }]}>
       <View style={styles.bands} pointerEvents="none">
-        {sunsetBands.map((color) => (
+        {skyBands.map((color) => (
           <View key={color} style={[styles.band, { backgroundColor: color }]} />
         ))}
         {centered && <View style={styles.sun} />}
@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     borderRadius: 65,
-    backgroundColor: '#F7E27E',
-    opacity: 0.85,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    opacity: 0.9,
   },
   content: {
     paddingHorizontal: spacing.lg,
@@ -107,13 +107,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderWidth: 1,
+    borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closePressed: { transform: [{ translateY: 2 }] },
+  closePressed: { opacity: 0.8 },
   centeredText: { textAlign: 'center' },
   title: {
     color: palette.parchmentBright,
@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
-    textShadowColor: palette.ink,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
+    textShadowColor: 'rgba(6, 51, 79, 0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   subtitle: {
     fontFamily: fonts.body,
@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.5,
     fontVariant: ['tabular-nums'],
-    textShadowColor: palette.ink,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
+    textShadowColor: 'rgba(6, 51, 79, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 });

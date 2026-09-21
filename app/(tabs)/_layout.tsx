@@ -35,8 +35,8 @@ export default function TabsLayout() {
         tabBarItemStyle: styles.item,
         tabBarActiveTintColor: palette.textOnDark,
         tabBarInactiveTintColor: palette.textDark,
-        tabBarActiveBackgroundColor: palette.ember,
-        tabBarInactiveBackgroundColor: palette.parchmentBright,
+        tabBarActiveBackgroundColor: palette.bark,
+        tabBarInactiveBackgroundColor: palette.parchment,
         tabBarLabelStyle: styles.label,
       }}
     >
@@ -74,20 +74,22 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   bar: {
-    // В макете панель — тёплый коричневый, заметно светлее карты, и кнопки
-    // на нём лежат с одинаковым полем сверху и снизу.
+    // Стеклянная панель: светлая вода под кнопками, тонкий блик по верхней
+    // кромке. Прежде здесь был тёплый коричневый из старого макета.
     backgroundColor: palette.bark,
-    borderTopWidth: 0,
+    borderTopWidth: 1,
+    borderTopColor: palette.edge,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.sm,
     gap: spacing.sm,
   },
   item: {
-    borderRadius: radii.md,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: palette.edge,
+    overflow: 'hidden',
     marginHorizontal: 4,
     paddingVertical: spacing.xs,
   },
-  label: { fontSize: 10, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, marginBottom: 0 },
+  label: { fontSize: 10, fontFamily: fonts.display, fontWeight: '700', letterSpacing: 0.5, marginBottom: 0 },
 });

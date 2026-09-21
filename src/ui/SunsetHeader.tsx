@@ -1,15 +1,19 @@
 /**
- * Шапка с закатом из макета.
+ * Шапка: небо над водой.
  *
- * Полосы рисуются обычными View, а не градиентом: в макете это именно
- * дискретные полосы, и так не нужна ни expo-linear-gradient, ни SVG.
+ * Полосы рисуются обычными View, а не градиентом: expo-linear-gradient —
+ * нативный модуль, а его нельзя доставить обновлением по воздуху. Семи
+ * полос хватает, чтобы переход читался как сплошной.
+ *
+ * Солнце просвечивает снизу мягким пятном, как сквозь толщу воды, —
+ * в аэро свет всегда идёт из-за края экрана.
  */
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { fonts, palette, radii, spacing, sunsetBands } from '@/core/theme/tokens';
+import { fonts, palette, radii, shadow, spacing, skyBands } from '@/core/theme/tokens';
 import { Avatar } from '@/features/profile/Avatar';
 
 interface Props {
@@ -41,7 +45,7 @@ export function SunsetHeader({
   return (
     <View style={[styles.root, { minHeight: topInset + MIN_BODY_HEIGHT }]}>
       <View style={styles.bands}>
-        {sunsetBands.map((color) => (
+        {skyBands.map((color) => (
           <View key={color} style={[styles.band, { backgroundColor: color }]} />
         ))}
         {/* Солнце: круг, наполовину утопленный за горизонт. */}
@@ -90,7 +94,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderBottomLeftRadius: radii.lg,
     borderBottomRightRadius: radii.lg,
-    backgroundColor: palette.plum,
+    backgroundColor: palette.bark,
+    ...shadow,
   },
   bands: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   band: { height: BAND_HEIGHT, width: '100%' },
@@ -101,18 +106,20 @@ const styles = StyleSheet.create({
     width: SUN_SIZE,
     height: SUN_SIZE,
     borderRadius: SUN_SIZE / 2,
-    backgroundColor: '#F7E27E',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
   },
-  // Холм, из-за которого встаёт солнце: видна только верхняя полоса,
-  // остальное уходит под нижний край шапки.
+  // Волна у нижнего края: прежде здесь был тёмный холм, из-за которого
+  // вставало солнце. В аэро горизонт — это вода, и она светлая.
   horizon: {
     position: 'absolute',
     left: -40,
     right: -40,
-    bottom: -72,
+    bottom: -78,
     height: 100,
-    backgroundColor: palette.ink,
-    transform: [{ rotate: '4deg' }],
+    borderTopLeftRadius: 120,
+    borderTopRightRadius: 120,
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    transform: [{ rotate: '2deg' }],
   },
   content: {
     // Без flex: в макете строка с уровнем прижата к верху, а под ней
@@ -126,7 +133,7 @@ const styles = StyleSheet.create({
   },
   titleBlock: { flex: 1 },
   title: {
-    color: palette.textOnDark,
+    color: palette.textDark,
     fontSize: 20,
     fontFamily: fonts.display,
     fontWeight: '900',
@@ -134,7 +141,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: fonts.body,
-    color: palette.parchment,
+    color: palette.textDark,
     fontSize: 12,
     letterSpacing: 1.5,
     marginTop: 2,
@@ -148,7 +155,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.sm,
     borderWidth: 2,
-    borderColor: palette.ink,
+    borderColor: palette.edgeSoft,
     backgroundColor: '#3A2A1E',
   },
   streakValue: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },

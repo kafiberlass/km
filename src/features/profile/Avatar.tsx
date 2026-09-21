@@ -56,8 +56,8 @@ export function Avatar({ value, size, name, useInitials = false }: Props) {
 
 const styles = StyleSheet.create({
   circle: {
-    borderWidth: 4,
-    borderColor: palette.ink,
+    borderWidth: 1,
+    borderColor: palette.edgeSoft,
     backgroundColor: palette.sand,
   },
   center: { alignItems: 'center', justifyContent: 'center' },

@@ -223,7 +223,7 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
       <Canvas style={StyleSheet.absoluteFill}>
         {/* Космос кроет плоскую карту целиком — иначе тайлы просвечивали бы
             сквозь океан и вся иллюзия шара рассыпалась. */}
-        <Rect x={0} y={0} width={width} height={height} color={palette.ink} />
+        <Rect x={0} y={0} width={width} height={height} color={palette.fog} />
 
         {stars.map((star, index) => (
           <Circle
@@ -244,10 +244,10 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
               cx={view.cx}
               cy={view.cy}
               r={view.r + 6}
-              color={palette.gold}
+              color={palette.tealBright}
               style="stroke"
-              strokeWidth={10}
-              opacity={0.35}
+              strokeWidth={12}
+              opacity={0.45}
             />
           </Group>
 

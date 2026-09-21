@@ -1,6 +1,9 @@
 /**
- * Мелкие элементы из макета: полосатый прогресс-бар, чип, тост, кнопка.
- * Все — без внешних зависимостей, чтобы скелет ставился одной командой.
+ * Мелкие элементы: полоса опыта, чип, тост, кнопка, плитка.
+ *
+ * Все — без внешних зависимостей. Стекло и блики собраны из обычных View
+ * с полупрозрачным белым: нативные градиенты и размытие потребовали бы
+ * пересборки приложения у всех, у кого оно уже стоит.
  */
 
 import React, { useEffect } from 'react';
@@ -13,7 +16,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, palette, radii, shadow, spacing } from '@/core/theme/tokens';
+import { Gloss } from './Gloss';
 
 export function XpBar({
   ratio,
@@ -34,12 +38,7 @@ export function XpBar({
   return (
     <View style={styles.barTrack}>
       <Animated.View style={[styles.barFill, fill]}>
-        {/* Диагональная штриховка из макета — набор наклонных полосок. */}
-        <View style={styles.hatchRow}>
-          {Array.from({ length: 40 }).map((_, index) => (
-            <View key={index} style={styles.hatch} />
-          ))}
-        </View>
+        <Gloss radius={radii.pill} height="50%" bottomGlow={false} />
       </Animated.View>
 
       {label != null && <Text style={styles.barLabel}>{label}</Text>}
@@ -58,6 +57,7 @@ export function Chip({
 }) {
   return (
     <View style={[styles.chip, style]}>
+      <Gloss radius={radii.pill} height="50%" bottomGlow={false} />
       {icon}
       <Text style={styles.chipText}>{label}</Text>
     </View>
@@ -111,6 +111,7 @@ export function ActionButton({
         disabled && styles.buttonDisabled,
       ]}
     >
+      <Gloss radius={radii.pill} height="48%" />
       <Text style={[styles.buttonText, tone === 'ghost' && styles.buttonTextGhost]}>{label}</Text>
     </Pressable>
   );
@@ -129,20 +130,22 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 26,
     borderRadius: radii.pill,
-    borderWidth: 3,
-    borderColor: palette.ink,
-    backgroundColor: palette.parchmentBright,
+    borderWidth: 1,
+    borderColor: palette.edge,
+    backgroundColor: palette.sand,
     overflow: 'hidden',
+    ...shadow,
+    shadowOpacity: 0.12,
   },
   // Подпись лежит поверх полосы по центру: отдельная строка под ней
   // съела бы место у карты, ради которого шапку и ужимали.
   barLabel: {
     position: 'absolute',
     alignSelf: 'center',
-    top: 3,
+    top: 4,
     color: palette.textDark,
-    // Цифры — пиксельным шрифтом: в макете все числа набраны им.
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '700',
     fontFamily: fonts.mono,
     letterSpacing: 1,
     fontVariant: ['tabular-nums'],
@@ -153,14 +156,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
   },
-  hatchRow: { flexDirection: 'row', gap: 8, paddingLeft: 4 },
-  hatch: {
-    width: 3,
-    height: 60,
-    backgroundColor: palette.emberDeep,
-    opacity: 0.5,
-    transform: [{ rotate: '20deg' }],
-  },
 
   chip: {
     flexDirection: 'row',
@@ -169,10 +164,12 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: palette.edge,
     backgroundColor: palette.parchmentBright,
+    overflow: 'hidden',
+    ...shadow,
   },
   chipText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '800', letterSpacing: 1 },
 
@@ -181,17 +178,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: palette.edge,
     backgroundColor: palette.parchmentBright,
+    ...shadow,
   },
   toastIcon: {
     width: 48,
     height: 48,
     borderRadius: radii.sm,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderWidth: 1,
+    borderColor: palette.edgeSoft,
     backgroundColor: palette.gold,
     alignItems: 'center',
     justifyContent: 'center',
@@ -204,8 +202,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.sm,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderWidth: 1,
+    borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -214,14 +212,17 @@ const styles = StyleSheet.create({
   button: {
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: palette.edge,
     backgroundColor: palette.ember,
     alignItems: 'center',
+    overflow: 'hidden',
+    ...shadow,
   },
   buttonGhost: { backgroundColor: palette.parchmentBright },
-  buttonPressed: { transform: [{ translateY: 2 }] },
+  // Нажатие — не сдвиг, а притухание блеска: стекло не ездит.
+  buttonPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   buttonTextGhost: { color: palette.textDark },
@@ -230,9 +231,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 3,
-    borderColor: palette.ink,
+    borderWidth: 1,
+    borderColor: palette.edge,
     backgroundColor: palette.parchmentBright,
+    ...shadow,
   },
   statValue: {
     color: palette.textDark,

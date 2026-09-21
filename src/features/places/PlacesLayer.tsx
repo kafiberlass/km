@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     width: MARKER,
     height: MARKER,
     borderRadius: radii.sm,
-    borderWidth: 3,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

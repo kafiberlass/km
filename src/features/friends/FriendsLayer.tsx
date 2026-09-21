@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     width: VISIT,
     height: VISIT,
     borderRadius: radii.sm,
-    borderWidth: 3,
+    borderWidth: 2,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',
     justifyContent: 'center',
