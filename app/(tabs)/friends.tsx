@@ -245,11 +245,17 @@ export default function FriendsScreen() {
           </View>
         ) : (
           <View style={styles.note}>
-            <Text style={styles.noteTitle}>Данные демонстрационные</Text>
+            <Text style={styles.noteTitle}>Это не настоящие друзья</Text>
             <Text style={styles.noteBody}>
-              Сервер не настроен, друзья ненастоящие: их рисует встроенный
-              демо-провайдер. Чтобы увидеть живого человека, задайте адрес проекта
-              и публичный ключ — инструкция в README, схема в docs/supabase.sql.
+              Приложение собрано без ключей от сервера, поэтому людей в нём нет —
+              показаны выдуманные. Попросите того, кто присылал вам приложение,
+              обновить его: настоящие друзья появятся сами, переустанавливать
+              ничего не нужно.
+            </Text>
+            <Text style={styles.noteBody}>
+              Если приложение собирали вы: ключи задаются в .env
+              (EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY),
+              схема базы — в docs/supabase.
             </Text>
           </View>
         )}

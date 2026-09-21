@@ -97,6 +97,31 @@ if [ -n "$LAST_BUILD_MARK" ] && [ "$LAST_BUILD_MARK" = "$HEAD_MARK" ]; then
   warn "  обновления по воздуху не хватит, нужна пересборка."
 fi
 
+# Обновление собирается здесь, на этой машине, и ключи Supabase попадают
+# в него из .env. Если их нет, уедет сборка с демонстрационными друзьями —
+# и заменит собой рабочую у всех, кому приложение уже поставили. Это хуже,
+# чем не отправить ничего.
+step "Проверяю ключи сервера"
+MISSING_KEYS=""
+for key in EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
+  if [ ! -f .env ] || ! grep -qE "^${key}=.+" .env; then
+    MISSING_KEYS="$MISSING_KEYS $key"
+  fi
+done
+
+if [ -n "$MISSING_KEYS" ]; then
+  fail "В файле .env нет ключей:$MISSING_KEYS
+
+Без них обновление увезёт всем демонстрационных друзей вместо настоящих.
+Ключи лежат в личном кабинете Supabase: Project settings -> API,
+это адрес проекта и ключ anon (он публичный по замыслу).
+
+Файл .env создаётся в корне проекта, по строке на ключ:
+  EXPO_PUBLIC_SUPABASE_URL=https://ваш-проект.supabase.co
+  EXPO_PUBLIC_SUPABASE_ANON_KEY=ключ"
+fi
+bold "  На месте"
+
 step "Отправляю обновление"
 bold "  Подпись: $MESSAGE"
 eas update --branch "$BRANCH" --message "$MESSAGE" \
