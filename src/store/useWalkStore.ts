@@ -151,6 +151,8 @@ interface WalkState {
   saveIdentity: (name: string | null, avatar: string | null) => void;
   /** Перечитать места: их список поменялся снаружи движка. */
   refreshPlaces: () => void;
+  /** Награда за выполненный квест дня. Начисляется один раз в сутки. */
+  claimQuest: (amount: number, title: string) => void;
   hydrate: () => void;
   /** Подхватить прогулку, которая шла до выгрузки приложения. */
   resume: () => void;
@@ -508,6 +510,26 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     // Прогулку, забытую со вчера, не продолжаем, а доводим до конца
     // обычным путём — с начислением опыта за пройденное.
     if (!isWalkResumable(active)) void get().stop();
+  },
+
+  claimQuest: (amount, title) => {
+    // Учёт «раз в сутки» живёт рядом с самим квестом (quests/today.ts):
+    // движку прогулки незачем знать про календарь.
+    repo.appendXpEvent('quest-done', amount, null, get().sessionId);
+
+    const profile = repo.getProfile();
+    const next = applyXp({ level: profile.level, xp: profile.xp } satisfies LevelState, amount);
+    repo.updateProfile({ level: next.level, xp: next.xp });
+
+    set({
+      level: next.level,
+      xp: next.xp,
+      toast: {
+        kind: 'level-up',
+        title: 'Квест дня выполнен',
+        subtitle: `${title} · +${amount} XP`,
+      },
+    });
   },
 
   refreshPlaces: () => {

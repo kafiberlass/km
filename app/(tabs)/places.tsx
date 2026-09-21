@@ -8,6 +8,8 @@ import { haversineMeters } from '@/core/geo/mercator';
 import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { placeKind } from '@/features/places/kinds';
 import { fetchNearbyPlaces } from '@/features/places/nearby';
+import { QuestCard } from '@/features/quests/QuestCard';
+import { useQuest } from '@/features/quests/useQuest';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -57,6 +59,8 @@ export default function PlacesScreen() {
       ? { lat: profile.originLat, lng: profile.originLng }
       : null;
 
+  const quest = useQuest(origin);
+
   const found = places.filter((p) => p.discoveredAt != null).length;
   const hidden = places.length - found;
 
@@ -102,6 +106,8 @@ export default function PlacesScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <QuestCard today={quest} />
+
         <View style={styles.search}>
           <View style={styles.ranges}>
             {RANGES.map((item, index) => {

@@ -24,6 +24,8 @@ import { isServerConfigured, useFriends } from '@/features/friends';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
 import { MapStack } from '@/features/map/MapStack';
+import { QuestCard } from '@/features/quests/QuestCard';
+import { useQuest } from '@/features/quests/useQuest';
 import { WalkStatus } from '@/features/tracking/WalkStatus';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { DEMO_CENTER } from '@/features/places/seed';
@@ -80,6 +82,9 @@ export default function MapScreen() {
   // Без ключей от сервера друзья ненастоящие. Рисовать выдуманных людей
   // на карте молча — значит врать: человек принимает их за живых.
   const serverReady = isServerConfigured();
+
+  // Цель дня. На карте — одной строкой, полностью она живёт на «Местах».
+  const quest = useQuest(origin);
 
   // Читаются из базы заново, когда меняется их список: нашли новые
   // через OSM, открыли очередное на прогулке, восстановили копию.
@@ -227,6 +232,12 @@ export default function MapScreen() {
           </Pressable>
 
           <View style={styles.overlayBottom} pointerEvents="box-none">
+            <Link href="/places" asChild>
+              <Pressable accessibilityRole="button" accessibilityLabel="Открыть квест дня">
+                <QuestCard today={quest} compact />
+              </Pressable>
+            </Link>
+
             {toast && (
               <Toast title={toast.title} subtitle={toast.subtitle} onDismiss={dismissToast} />
             )}
