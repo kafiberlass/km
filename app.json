@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "km",
+    "platforms": ["ios", "android"],
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "runtimeVersion": "1",

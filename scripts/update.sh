@@ -34,16 +34,34 @@ if ! git diff --quiet -- package-lock.json; then
   bold "  package-lock.json восстановлен (его меняет сборка, это нормально)"
 fi
 
-# app.json из отката исключён намеренно: EAS дописывает туда своё —
-# идентификатор проекта и адрес обновлений, привязанные к конкретному
-# аккаунту. Откатить их значит заставить EAS настраивать всё заново
-# при каждой сборке, а сборку — падать с просьбой повторить команду.
 if ! git diff --quiet -- . ':(exclude)app.json' \
   || ! git diff --cached --quiet -- . ':(exclude)app.json'; then
   git stash push --message "перед обновлением $(date '+%d.%m %H:%M')" \
     -- . ':(exclude)app.json' >/dev/null
   warn "  Ваши правки в коде отложены в сторону (git stash)."
   warn "  Вернуть их потом: git stash pop"
+fi
+
+# app.json — отдельная история. EAS дописывает туда своё: адрес обновлений
+# и номер проекта, привязанные к конкретному аккаунту, и в репозитории
+# их нет. Просто откатить файл нельзя — потеряется настройка обновлений;
+# просто оставить тоже нельзя — обновление в него не встанет.
+#
+# Поэтому эти два значения снимаются, файл откатывается, а после обновления
+# они возвращаются на место.
+KEEP="$(node -e '
+  const app = require("./app.json");
+  const expo = app.expo || {};
+  const keep = {
+    url: (expo.updates || {}).url || null,
+    projectId: ((expo.extra || {}).eas || {}).projectId || null,
+  };
+  process.stdout.write(keep.url || keep.projectId ? JSON.stringify(keep) : "");
+' 2>/dev/null || true)"
+
+if ! git diff --quiet -- app.json; then
+  git checkout -- app.json
+  bold "  app.json восстановлен (настройку обновлений вернём после)"
 fi
 
 step "Забираю обновления"
@@ -62,6 +80,26 @@ git merge --ff-only FETCH_HEAD >/dev/null 2>&1 || fail "Обновление н�
   git log --oneline origin/$BRANCH..HEAD"
 
 AFTER="$(git rev-parse HEAD)"
+
+# Возвращаем адрес обновлений и номер проекта в обновлённый app.json.
+if [ -n "$KEEP" ]; then
+  KEEP="$KEEP" node -e '
+    const fs = require("fs");
+    const keep = JSON.parse(process.env.KEEP);
+    const app = JSON.parse(fs.readFileSync("app.json", "utf8"));
+
+    app.expo = app.expo || {};
+    if (keep.url) {
+      app.expo.updates = { ...(app.expo.updates || {}), url: keep.url };
+    }
+    if (keep.projectId) {
+      app.expo.extra = app.expo.extra || {};
+      app.expo.extra.eas = { ...(app.expo.extra.eas || {}), projectId: keep.projectId };
+    }
+
+    fs.writeFileSync("app.json", JSON.stringify(app, null, 2) + "\n");
+  ' && bold "  Настройка обновлений возвращена в app.json"
+fi
 
 if [ "$BEFORE" = "$AFTER" ]; then
   bold "

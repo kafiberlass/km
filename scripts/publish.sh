@@ -124,7 +124,7 @@ bold "  На месте"
 
 step "Отправляю обновление"
 bold "  Подпись: $MESSAGE"
-eas update --branch "$BRANCH" --message "$MESSAGE" \
+eas update --branch "$BRANCH" --environment "$BRANCH" --message "$MESSAGE" \
   || fail "Не удалось отправить обновление. Вывод выше — покажите разработчику."
 
 cat <<'NOTE'
