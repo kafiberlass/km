@@ -20,7 +20,7 @@ import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { fonts, palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
-import { useFriends } from '@/features/friends';
+import { isServerConfigured, useFriends } from '@/features/friends';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
 import { MapStack } from '@/features/map/MapStack';
@@ -76,6 +76,10 @@ export default function MapScreen() {
   const { geometry } = useFogGeometry(origin, geometryVersion, liveSegment);
   const coverage = useCoverage(origin, exploredCells);
   const friends = useFriends(origin, showFriends);
+
+  // Без ключей от сервера друзья ненастоящие. Рисовать выдуманных людей
+  // на карте молча — значит врать: человек принимает их за живых.
+  const serverReady = isServerConfigured();
 
   // Читаются из базы заново, когда меняется их список: нашли новые
   // через OSM, открыли очередное на прогулке, восстановили копию.
@@ -179,7 +183,11 @@ export default function MapScreen() {
 
               <Pressable onPress={() => setShowFriends((value) => !value)}>
                 <Chip
-                  label={showFriends ? `ДРУЗЬЯ ${friends.length}` : 'ДРУЗЬЯ ВЫКЛ'}
+                  label={
+                    showFriends
+                      ? `ДРУЗЬЯ ${friends.length}${serverReady ? '' : ' · ДЕМО'}`
+                      : 'ДРУЗЬЯ ВЫКЛ'
+                  }
                   icon={
                     <Feather
                       name="users"

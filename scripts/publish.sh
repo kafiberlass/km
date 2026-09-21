@@ -19,6 +19,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# shellcheck source=scripts/lib/sync-env.sh
+. "$(dirname "$0")/lib/sync-env.sh"
+
 bold() { printf '\033[1m%s\033[0m\n' "$1"; }
 step() { printf '\n\033[1m→ %s\033[0m\n' "$1"; }
 warn() { printf '\033[33m%s\033[0m\n' "$1"; }
@@ -121,6 +124,12 @@ if [ -n "$MISSING_KEYS" ]; then
   EXPO_PUBLIC_SUPABASE_ANON_KEY=ключ"
 fi
 bold "  На месте"
+
+# Обновление собирается с переменными окружения проекта на стороне Expo,
+# а не только с локальным .env. Если ключи туда не доехали (а один раз
+# они не доехали), уедет сборка с выдуманными друзьями.
+step "Передаю ключи в облако"
+sync_env_to_expo "$BRANCH"
 
 step "Отправляю обновление"
 bold "  Подпись: $MESSAGE"

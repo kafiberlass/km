@@ -16,6 +16,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# shellcheck source=scripts/lib/sync-env.sh
+. "$(dirname "$0")/lib/sync-env.sh"
+
 bold() { printf '\033[1m%s\033[0m\n' "$1"; }
 step() { printf '\n\033[1m→ %s\033[0m\n' "$1"; }
 warn() { printf '\033[33m%s\033[0m\n' "$1"; }
@@ -59,27 +62,8 @@ else
   bold "  Вошли как: $(eas whoami 2>/dev/null)"
 fi
 
-# Ключи Supabase лежат в .env, а .env не уезжает в облако: он в .gitignore,
-# и это правильно. Поэтому те же значения кладём в переменные окружения
-# проекта на стороне Expo — иначе собранное приложение покажет демо-друзей
-# вместо настоящих.
 step "Передаю ключи Supabase в облако сборки"
-if [ -f .env ]; then
-  while IFS='=' read -r key value; do
-    case "$key" in
-      EXPO_PUBLIC_SUPABASE_URL|EXPO_PUBLIC_SUPABASE_ANON_KEY)
-        [ -z "${value:-}" ] && continue
-        # Тихо: значения не печатаем, хоть ключ и публичный по замыслу.
-        eas env:create --name "$key" --value "$value" \
-          --environment preview --visibility plaintext --force >/dev/null 2>&1 \
-          || warn "  Не удалось записать $key — проверьте вручную: eas env:list"
-        bold "  $key передан"
-        ;;
-    esac
-  done < <(grep -E '^EXPO_PUBLIC_SUPABASE' .env || true)
-else
-  warn "  Файла .env нет: приложение соберётся с демо-друзьями."
-fi
+sync_env_to_expo preview
 
 # Без этого собранное приложение не знает, куда ходить за обновлениями,
 # и останется навсегда таким, каким собрано: новый код придётся снова
