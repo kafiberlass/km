@@ -31,7 +31,15 @@ import {
   type GeoPoint,
 } from '@/core/geo/filter';
 import { isAfterSunset } from '@/core/geo/sun';
+import { getValue, setValue } from '@/core/db/kv';
+import {
+  AUTO_RADII_M,
+  AUTO_SEARCH_KEY,
+  isOsmPlace,
+  shouldAutoSearch,
+} from '@/features/places/autoFetch';
 import { reachedPlaces } from '@/features/places/discovery';
+import { fetchNearbyPlaces } from '@/features/places/nearby';
 import { restoreWalk } from '@/core/walk/restore';
 import { isWalkResumable } from '@/core/walk/session';
 import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
@@ -219,6 +227,10 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     });
 
     catchUpAchievements(set, get);
+
+    // Места ищутся сами — один раз, в фоне и молча, если не нашлись.
+    // Человек не должен искать кнопку, чтобы увидеть свой город на карте.
+    void findPlacesOnce(set, get);
 
     get().resume();
     get().watch();
@@ -576,6 +588,59 @@ function openWalk(
  * её никто не вызывал: места нельзя было открыть в принципе. Здесь она
  * наконец подключена к прогулке.
  */
+/**
+ * Первый поиск мест — без кнопки и без спроса.
+ *
+ * Два захода: вокруг дома целиком и достопримечательности по всему
+ * городу. Неудача проходит молча: человек этого поиска не заказывал,
+ * и жаловаться ему на чужой занятый сервер не за что. Отметка о попытке
+ * ставится до запроса, а не после, — иначе телефон без связи ходил бы
+ * в сеть при каждом запуске.
+ */
+async function findPlacesOnce(
+  set: (partial: Partial<WalkState>) => void,
+  get: () => WalkState,
+): Promise<void> {
+  const home = origin;
+  if (!home) return;
+
+  const known = repo.allPlaces().filter((place) => isOsmPlace(place.id));
+  const decision = shouldAutoSearch({
+    hasOrigin: true,
+    landmarks: known.filter((place) => place.type === 'landmark').length,
+    osmPlaces: known.length,
+    lastAttemptAt: Number(getValue(AUTO_SEARCH_KEY)) || null,
+    now: Date.now(),
+  });
+  if (!decision) return;
+
+  setValue(AUTO_SEARCH_KEY, String(Date.now()));
+
+  let found = 0;
+  for (const radiusM of AUTO_RADII_M) {
+    const result = await fetchNearbyPlaces(home, radiusM);
+    if (result.status !== 'ok') continue;
+
+    repo.upsertPlaces(result.places);
+    found += result.places.length;
+  }
+
+  if (found === 0) return;
+
+  // Демонстрационные места из Москвы — ровно то, ради чего всё затевалось:
+  // они стоят на карте до первого настоящего поиска.
+  repo.removeDemoPlaces();
+  get().refreshPlaces();
+
+  set({
+    toast: {
+      kind: 'place',
+      title: 'Нашлись интересные места',
+      subtitle: 'Достопримечательности видны на карте — можно дойти',
+    },
+  });
+}
+
 function discoverPlacesAt(
   point: GeoPoint,
   sessionId: string,
