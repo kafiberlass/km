@@ -21,7 +21,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { Avatar } from '@/features/profile/Avatar';
@@ -185,14 +185,14 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchment,
     gap: spacing.sm,
   },
   cardTitle: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   input: {
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     borderRadius: radii.md,
     backgroundColor: palette.parchmentBright,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',

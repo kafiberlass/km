@@ -14,7 +14,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, palette, spacing, skyBands } from '@/core/theme/tokens';
+import { fonts, line, palette, skyBands, spacing } from '@/core/theme/tokens';
 
 interface Props {
   title: string;
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',

@@ -129,3 +129,23 @@ export async function applyUpdate(): Promise<void> {
   if (!updates || !updates.isEnabled) return;
   await updates.reloadAsync();
 }
+
+/**
+ * Перезапустить приложение как есть, без обновления.
+ *
+ * Нужно смене темы: стили в React Native собираются в момент загрузки
+ * файла, и подменить их на лету нельзя. Возвращает false, если модуль
+ * недоступен, — тогда человеку говорят закрыть приложение руками.
+ */
+export async function restartApp(): Promise<boolean> {
+  const updates = loadUpdates();
+  if (!updates || !updates.isEnabled) return false;
+
+  try {
+    await updates.reloadAsync();
+    return true;
+  } catch (error) {
+    console.warn('[updates] перезапуск не удался', error);
+    return false;
+  }
+}

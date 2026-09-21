@@ -9,7 +9,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, palette } from '@/core/theme/tokens';
+import { fonts, line, palette } from '@/core/theme/tokens';
 
 import { initialsOf, parseAvatar } from './avatars';
 
@@ -56,7 +56,7 @@ export function Avatar({ value, size, name, useInitials = false }: Props) {
 
 const styles = StyleSheet.create({
   circle: {
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.sand,
   },

@@ -1,3 +1,5 @@
+import { activeTheme, type ThemeName } from './choice';
+
 /**
  * Токены оформления.
  *
@@ -16,7 +18,7 @@
  * «пергамент» теперь означают оттенки воды и стекла.
  */
 
-export const palette = {
+const aquaPalette = {
   /** Самый тёмный слой: глубина под водой. Тени и текст на светлом. */
   ink: '#06334F',
   /** Фон под туманом — толща воды. */
@@ -76,7 +78,7 @@ export const palette = {
  * нельзя доставить обновлением по воздуху. Полос семь, и на глаз между
  * ними получается ровный переход.
  */
-export const skyBands = [
+const aquaBands = [
   '#0B5C9E',
   '#1E86CE',
   '#35A9E8',
@@ -87,7 +89,7 @@ export const skyBands = [
 ] as const;
 
 /** Мягкая тень под стеклом. В аэро она заменяет обводку. */
-export const shadow = {
+const aquaShadow = {
   shadowColor: '#06334F',
   shadowOpacity: 0.18,
   shadowRadius: 12,
@@ -133,16 +135,113 @@ export const spacing = {
 */
 const system = undefined;
 
-export const fonts = {
+const aquaFonts = {
   display: system,
   mono: system,
   body: system,
 } as const;
 
+/**
+ * Вторая тема — «Сумерки»: то самое прежнее оформление.
+ *
+ * Земля, пергамент и чернила: тёмная карта, светлые карточки на песке,
+ * жирные контуры, узкий гротеск в заголовках и пиксельные цифры.
+ * Оно никуда не делось — стало ночным.
+ */
+const duskPalette = {
+  ink: '#241812',
+  fog: '#2E1F17',
+  fogSoft: '#3A2A1E',
+
+  bark: '#684026',
+  dune: '#E5D6B7',
+  ground: '#DEC49A',
+  fogVeil: '#3F2C1E',
+
+  sand: '#D9C4A0',
+  parchment: '#EFE6D2',
+  parchmentBright: '#F5EDDC',
+
+  ember: '#E4713F',
+  emberDeep: '#C85430',
+
+  gold: '#E9A83C',
+  rust: '#C8483F',
+  plum: '#6B3A5B',
+  mulberry: '#8E4A5A',
+
+  teal: '#2E7D6E',
+  tealBright: '#3E9E8A',
+
+  textDark: '#2A1B12',
+  textMuted: '#6B5544',
+  textOnDark: '#F5EDDC',
+
+  // В сумерках границу держит контур, а не блик: стекла здесь нет.
+  edge: '#241812',
+  edgeSoft: '#241812',
+  glass: 'rgba(36, 24, 18, 0.08)',
+  glassStrong: 'rgba(36, 24, 18, 0.16)',
+  gloss: 'transparent',
+} as const;
+
+/** Закат в шапке — сверху вниз. */
+const duskBands = [
+  '#4A2A46',
+  '#6B3A5B',
+  '#8E4A5A',
+  '#C8483F',
+  '#E4713F',
+  '#E9A83C',
+  '#F2C94C',
+] as const;
+
+/** В сумерках тени нет: её роль играет чёрный контур. */
+const duskShadow = {
+  shadowColor: 'transparent',
+  shadowOpacity: 0,
+  shadowRadius: 0,
+  shadowOffset: { width: 0, height: 0 },
+  elevation: 0,
+} as const;
+
+const duskFonts = {
+  display: 'Oswald-Bold',
+  mono: 'VT323-Regular',
+  body: 'Oswald-Regular',
+} as const;
+
+/**
+ * Какая тема сейчас.
+ *
+ * Определяется один раз при запуске: стили в React Native собираются
+ * в момент загрузки файла, и подменить их на лету нельзя. Поэтому смена
+ * темы просит перезапустить приложение — так же, как это делают системные
+ * настройки языка.
+ */
+export const themeName: ThemeName = activeTheme();
+
+const isDusk = themeName === 'dusk';
+
+export const palette = (isDusk ? duskPalette : aquaPalette) as typeof aquaPalette;
+export const skyBands = isDusk ? duskBands : aquaBands;
+export const shadow = isDusk ? duskShadow : aquaShadow;
+export const fonts = (isDusk ? duskFonts : aquaFonts) as typeof aquaFonts;
+
+/**
+ * Толщина контура.
+ *
+ * В акве границу держит блик, и линия нужна волосяная. В сумерках
+ * наоборот: жирный контур — главная примета того оформления.
+ */
+export const line = isDusk ? 3 : 1;
+
 export const theme = {
   palette,
   skyBands,
   shadow,
+  line,
+  themeName,
   radii,
   spacing,
   fonts,

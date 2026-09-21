@@ -15,7 +15,7 @@ import { router } from 'expo-router';
 import { getProfile, listWalks } from '@/core/db/repo';
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { deviceTimeZone } from '@/core/rules/streak';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { totalsSince } from '@/core/walk/history';
 import { buildBoard, formatWeekDistance } from '@/features/friends/board';
 import { isServerConfigured, useFriends } from '@/features/friends';
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchment,
   },

@@ -12,7 +12,7 @@ import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { ActionButton } from '@/ui/widgets';
 
 interface Props {
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.rust,
     alignItems: 'center',
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   box: {
     maxHeight: 260,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
   },

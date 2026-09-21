@@ -10,7 +10,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 
 import type { TodayQuest } from './today';
 
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     gap: spacing.sm,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.gold,
     alignItems: 'center',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
   },

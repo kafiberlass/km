@@ -18,7 +18,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 
 import { collectBackup, restoreBackup } from '@/core/db/backup';
 import { backupFileName, parseBackup, summarize } from '@/core/backup/format';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton, Stat } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchment,
     gap: spacing.sm,

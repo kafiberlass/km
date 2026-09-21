@@ -17,7 +17,7 @@ import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
-import { fonts, palette, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { isServerConfigured, useFriends } from '@/features/friends';
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginBottom: spacing.md,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     overflow: 'hidden',
   },
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',

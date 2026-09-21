@@ -21,7 +21,7 @@ import type { CameraRef } from '@maplibre/maplibre-react-native';
 import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
-import { palette, spacing } from '@/core/theme/tokens';
+import { line, palette, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { GLOBE_ZOOM_START } from '@/features/globe/projection';
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',

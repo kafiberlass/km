@@ -22,7 +22,7 @@ import {
   totalsOf,
   totalsSince,
 } from '@/core/walk/history';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { Stat } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
 
   day: {
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchment,
     overflow: 'hidden',
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: palette.sand,
-    borderBottomWidth: 1,
+    borderBottomWidth: line,
     borderBottomColor: palette.ink,
   },
   dayTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 13, letterSpacing: 0.5 },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.xl,
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: line,
     borderStyle: 'dashed',
     borderColor: palette.textMuted,
   },

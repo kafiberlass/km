@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { fonts, palette, radii, shadow, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, shadow, spacing } from '@/core/theme/tokens';
 import { Gloss } from './Gloss';
 
 export function XpBar({
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 26,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edge,
     backgroundColor: palette.sand,
     overflow: 'hidden',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edge,
     backgroundColor: palette.parchmentBright,
     overflow: 'hidden',
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edge,
     backgroundColor: palette.parchmentBright,
     ...shadow,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.sm,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.gold,
     alignItems: 'center',
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.sm,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edge,
     backgroundColor: palette.ember,
     alignItems: 'center',
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edge,
     backgroundColor: palette.parchmentBright,
     ...shadow,

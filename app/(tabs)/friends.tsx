@@ -35,7 +35,7 @@ import {
 } from '@/features/friends';
 import { Avatar } from '@/features/profile/Avatar';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     gap: spacing.md,
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    borderWidth: 1,
+    borderWidth: line,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radii.sm,
-    borderWidth: 1,
+    borderWidth: line,
     backgroundColor: palette.parchment,
     alignItems: 'center',
     justifyContent: 'center',
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchment,
     color: palette.textDark,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   note: {
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.fog,
     gap: 6,

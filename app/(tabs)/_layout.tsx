@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 
 /**
  * Высота панели без учёта жеста «домой».
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     // Стеклянная панель: светлая вода под кнопками, тонкий блик по верхней
     // кромке. Прежде здесь был тёплый коричневый из старого макета.
     backgroundColor: palette.bark,
-    borderTopWidth: 1,
+    borderTopWidth: line,
     borderTopColor: palette.edge,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.sm,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   item: {
     borderRadius: radii.pill,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edge,
     overflow: 'hidden',
     marginHorizontal: 4,

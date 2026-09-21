@@ -13,7 +13,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { palette, radii } from '@/core/theme/tokens';
+import { palette, radii, themeName } from '@/core/theme/tokens';
 
 interface Props {
   /** Скругление элемента, на котором лежит блик: должно совпадать. */
@@ -25,6 +25,10 @@ interface Props {
 }
 
 export function Gloss({ radius = radii.md, height = '52%', bottomGlow = true }: Props) {
+  // В сумерках стекла нет вовсе: там границу держит чёрный контур,
+  // и белое пятно поверх него выглядело бы грязью на бумаге.
+  if (themeName === 'dusk') return null;
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <View

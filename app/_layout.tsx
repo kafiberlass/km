@@ -110,6 +110,7 @@ export default function RootLayout() {
           <Stack.Screen name="offline" options={{ presentation: 'modal' }} />
           <Stack.Screen name="update" options={{ presentation: 'modal' }} />
           <Stack.Screen name="week" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="theme" options={{ presentation: 'modal' }} />
           {/* Карта во весь экран: именно fullScreenModal, а не modal —
               иначе сверху осталась бы полоска предыдущего экрана, ради
               избавления от которой окно и заводилось. */}

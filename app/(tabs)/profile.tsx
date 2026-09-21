@@ -11,7 +11,7 @@ import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { Avatar } from '@/features/profile/Avatar';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -169,6 +169,14 @@ export default function ProfileScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/theme" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="droplet" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>ОФОРМЛЕНИЕ</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
+
         <Link href="/update" asChild>
           <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
             <Feather name="refresh-cw" size={18} color={palette.textDark} />
@@ -230,7 +238,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',
@@ -246,7 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     alignItems: 'center',
@@ -258,7 +266,7 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     gap: spacing.md,
@@ -272,7 +280,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -291,7 +299,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
   },
@@ -303,7 +311,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.bark,
   },
@@ -313,7 +321,7 @@ const styles = StyleSheet.create({
   note: {
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.fog,
     gap: 6,

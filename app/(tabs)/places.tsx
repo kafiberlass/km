@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { allPlaces, getProfile, removeDemoPlaces, upsertPlaces } from '@/core/db/repo';
 import { haversineMeters } from '@/core/geo/mercator';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { placeKind } from '@/features/places/kinds';
 import { fetchNearbyPlaces } from '@/features/places/nearby';
 import { QuestCard } from '@/features/quests/QuestCard';
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.sand,
     alignItems: 'center',
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
   },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',

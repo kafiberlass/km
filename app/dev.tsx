@@ -19,7 +19,7 @@ import { countCells } from '@/core/db/repo';
 import { clearLastError, readLastError } from '@/core/errors/lastError';
 import { DEFAULT_FILTER, filterTrack } from '@/core/geo/filter';
 import { parseGpx } from '@/core/geo/gpx';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { fogSetting, useFogEnabled } from '@/features/fog/fogSetting';
 import { MockTrackingProvider } from '@/features/tracking/mock';
 import { ActionButton, Stat } from '@/ui/widgets';
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.rust,
     backgroundColor: palette.parchmentBright,
   },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.ink,
     gap: 4,

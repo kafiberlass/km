@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 
 import { buildSnapshot, countCells, unlockedAchievements } from '@/core/db/repo';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
-import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     backgroundColor: palette.parchmentBright,
     gap: 6,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: line,
     borderColor: palette.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',
