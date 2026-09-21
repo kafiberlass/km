@@ -3,13 +3,26 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { useFonts } from 'expo-font';
 
 import { migrate } from '@/core/db/client';
+import { describeError, rememberError } from '@/core/errors/lastError';
+import { CrashScreen } from '@/ui/CrashScreen';
 import { seedDemoPlaces } from '@/features/places/seed';
 import { fonts, palette } from '@/core/theme/tokens';
 import { useWalkStore } from '@/store/useWalkStore';
+
+/**
+ * Экран поломки вместо белого листа.
+ *
+ * expo-router сам подставляет то, что экспортировано отсюда под этим
+ * именем, когда падает отрисовка любого экрана.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  rememberError(error, false);
+  return <CrashScreen text={describeError(error)} onRetry={() => void retry()} />;
+}
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -26,6 +39,36 @@ export default function RootLayout() {
     'VT323-Regular': require('../assets/fonts/VT323-Regular.ttf'),
   });
 
+  /**
+   * Ошибки, случившиеся вне отрисовки: в обработчике нажатия, в ответе
+   * сети, в фоновой задаче. Отрисовка их не видит, и раньше они уносили
+   * приложение молча — человек видел только, что оно закрылось.
+   *
+   * Записываем и передаём дальше: подменять поведение системы целиком
+   * опаснее, чем падать, — после настоящей поломки приложение может
+   * остаться в состоянии, в котором ему нельзя доверять. Зато при
+   * следующем запуске в настройках будет написано, что произошло.
+   */
+  useEffect(() => {
+    const globals = globalThis as { ErrorUtils?: {
+      getGlobalHandler?: () => (error: unknown, isFatal?: boolean) => void;
+      setGlobalHandler?: (handler: (error: unknown, isFatal?: boolean) => void) => void;
+    } };
+
+    const utils = globals.ErrorUtils;
+    const previous = utils?.getGlobalHandler?.();
+    if (!utils?.setGlobalHandler) return;
+
+    utils.setGlobalHandler((error, isFatal) => {
+      rememberError(error, isFatal === true);
+      previous?.(error, isFatal);
+    });
+
+    return () => {
+      if (previous) utils.setGlobalHandler?.(previous);
+    };
+  }, []);
+
   useEffect(() => {
     try {
       // Схема поднимается синхронно до первого экрана: половина приложения
@@ -39,14 +82,9 @@ export default function RootLayout() {
     }
   }, [hydrate]);
 
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>Не удалось открыть базу</Text>
-        <Text style={styles.errorBody}>{error}</Text>
-      </View>
-    );
-  }
+  // Тем же экраном, что и остальные поломки: с кнопкой «отправить».
+  // Пересказывать ошибку словами в чате бесполезно, а переслать — толк.
+  if (error) return <CrashScreen text={`Не удалось открыть базу\n${error}`} />;
 
   if (!ready || (!fontsLoaded && !fontsError)) {
     return (

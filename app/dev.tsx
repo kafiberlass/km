@@ -8,7 +8,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
@@ -16,6 +16,7 @@ import { WALK_CHISTYE_PRUDY_GPX } from '../assets/fixtures/walkChistyePrudy';
 import { resetDatabase } from '@/core/db/client';
 import { countInbox } from '@/core/db/inbox';
 import { countCells } from '@/core/db/repo';
+import { clearLastError, readLastError } from '@/core/errors/lastError';
 import { DEFAULT_FILTER, filterTrack } from '@/core/geo/filter';
 import { parseGpx } from '@/core/geo/gpx';
 import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
@@ -27,6 +28,7 @@ import { useWalkStore } from '@/store/useWalkStore';
 const SPEEDS = [1, 20, 100] as const;
 
 export default function DevScreen() {
+  const [crash, setCrash] = useState(() => readLastError());
   const insets = useSafeAreaInsets();
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -163,6 +165,33 @@ export default function DevScreen() {
       />
       <ActionButton label="ЗАКРЫТЬ" tone="ghost" onPress={() => router.back()} />
 
+      {/* Последняя поломка. Приложение стоит на чужих телефонах, и это
+          единственный способ узнать, что там случилось: человек открывает
+          настройки и пересылает текст. */}
+      {crash != null && (
+        <View style={styles.crash}>
+          <Text style={styles.crashTitle}>
+            ПОСЛЕДНЯЯ ОШИБКА{crash.fatal ? ' · УРОНИЛА ПРИЛОЖЕНИЕ' : ''}
+          </Text>
+          <Text style={styles.crashText} selectable>
+            {crash.text}
+          </Text>
+          <ActionButton
+            label="ОТПРАВИТЬ РАЗРАБОТЧИКУ"
+            onPress={() => void Share.share({ message: `КМ, поломка:\n\n${crash.text}` })}
+          />
+          <ActionButton
+            label="ЗАБЫТЬ ОШИБКУ"
+            tone="ghost"
+            onPress={() => {
+              clearLastError();
+              setCrash(null);
+              append('запись об ошибке стёрта');
+            }}
+          />
+        </View>
+      )}
+
       <View style={styles.logBox}>
         {log.length === 0 && <Text style={styles.logEmpty}>Лог пуст</Text>}
         {log.map((line, index) => (
@@ -181,6 +210,22 @@ const styles = StyleSheet.create({
   heading: { color: palette.textOnDark, fontSize: 24, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 2 },
   subheading: { color: palette.parchment, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  crash: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 3,
+    borderColor: palette.rust,
+    backgroundColor: palette.parchmentBright,
+  },
+  crashTitle: {
+    color: palette.rust,
+    fontFamily: fonts.display,
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  crashText: { color: palette.textDark, fontFamily: fonts.mono, fontSize: 12 },
   logBox: {
     marginTop: spacing.md,
     padding: spacing.md,
