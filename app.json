@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "runtimeVersion": "1",
     "updates": {
+      "url": "https://u.expo.dev/3d2acf55-80b4-49ca-b886-3f5d042a36f7",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
       "requestHeaders": { "expo-channel-name": "preview" }
@@ -74,6 +75,9 @@
         }
       ]
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": { "typedRoutes": true },
+    "extra": {
+      "eas": { "projectId": "3d2acf55-80b4-49ca-b886-3f5d042a36f7" }
+    }
   }
 }

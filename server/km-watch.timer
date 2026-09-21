@@ -1,0 +1,11 @@
+[Unit]
+Description=КМ: проверять GitHub каждые две минуты
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+# Две проверки разом не нужны: предыдущая могла собирать apk полчаса.
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

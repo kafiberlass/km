@@ -1,0 +1,13 @@
+[Unit]
+Description=КМ: забрать новый код, проверить и отправить обновление
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=km
+WorkingDirectory=/srv/km/repo
+EnvironmentFile=/etc/km/env
+ExecStart=/usr/local/bin/km-watch
+# Сборка apk на слабой машине идёт долго, но не бесконечно.
+TimeoutStartSec=3600
