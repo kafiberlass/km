@@ -109,6 +109,9 @@ export function FogLayer({
 
       {showTrail && (
         <Group matrix={matrix}>
+          {/* Два прохода: широкое свечение и тонкое светлое ядро внутри.
+              По макету тропа светится изнутри — это награда за метры,
+              и одной линией такого не получить. */}
           <Path
             path={geometry.trail}
             style="stroke"
@@ -117,7 +120,16 @@ export function FogLayer({
             strokeCap="round"
             strokeJoin="round"
             color={palette.ember}
-            opacity={0.9}
+            opacity={0.55}
+          />
+          <Path
+            path={geometry.trail}
+            style="stroke"
+            strokeWidth={geometry.revealStrokeMerc * 0.17}
+            strokeCap="round"
+            strokeJoin="round"
+            color={palette.trailCore}
+            opacity={0.95}
           />
         </Group>
       )}

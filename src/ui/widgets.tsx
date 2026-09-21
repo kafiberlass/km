@@ -38,7 +38,14 @@ export function XpBar({
   return (
     <View style={styles.barTrack}>
       <Animated.View style={[styles.barFill, fill]}>
-        <Gloss radius={radii.pill} height="50%" bottomGlow={false} />
+        {/* Диагональная штриховка под 115° — прямая цитата из полосы
+            прогресса Windows Vista, и в макете она названа поимённо. */}
+        <View style={styles.hatchRow}>
+          {Array.from({ length: 40 }).map((_, index) => (
+            <View key={index} style={styles.hatch} />
+          ))}
+        </View>
+        <Gloss radius={radii.pill} />
       </Animated.View>
 
       {label != null && <Text style={styles.barLabel}>{label}</Text>}
@@ -57,7 +64,7 @@ export function Chip({
 }) {
   return (
     <View style={[styles.chip, style]}>
-      <Gloss radius={radii.pill} height="50%" bottomGlow={false} />
+      <Gloss radius={radii.pill} />
       {icon}
       <Text style={styles.chipText}>{label}</Text>
     </View>
@@ -111,8 +118,15 @@ export function ActionButton({
         disabled && styles.buttonDisabled,
       ]}
     >
-      <Gloss radius={radii.pill} height="48%" />
-      <Text style={[styles.buttonText, tone === 'ghost' && styles.buttonTextGhost]}>{label}</Text>
+      {({ pressed }) => (
+        <>
+          {/* Нажатие — инверсия света, без сдвига по Y: так в макете. */}
+          <Gloss radius={radii.pill} pressed={pressed} />
+          <Text style={[styles.buttonText, tone === 'ghost' && styles.buttonTextGhost]}>
+            {label}
+          </Text>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -155,6 +169,14 @@ const styles = StyleSheet.create({
     backgroundColor: palette.ember,
     overflow: 'hidden',
     justifyContent: 'center',
+  },
+  hatchRow: { flexDirection: 'row', gap: 10, paddingLeft: 4 },
+  hatch: {
+    width: 5,
+    height: 70,
+    backgroundColor: palette.emberDeep,
+    opacity: 0.45,
+    transform: [{ rotate: '115deg' }],
   },
 
   chip: {
@@ -221,8 +243,9 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   buttonGhost: { backgroundColor: palette.parchmentBright },
-  // Нажатие — не сдвиг, а притухание блеска: стекло не ездит.
-  buttonPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+  // Само нажатие рисует Gloss: тень уезжает внутрь, свет переворачивается.
+  // Стекло при этом остаётся на месте — оно не ездит.
+  buttonPressed: { shadowOpacity: 0.08, elevation: 1 },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   buttonTextGhost: { color: palette.textDark },

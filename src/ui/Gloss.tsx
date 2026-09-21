@@ -1,13 +1,20 @@
 /**
- * Блик — то, из чего сделан весь Frutiger Aero.
+ * Стекло по макету: четыре слоя и жёсткий стык на 46/47%.
  *
- * Белое пятно по верхней половине элемента: именно оно превращает плоский
- * прямоугольник в кусок мокрого стекла. Внизу добавляется едва заметное
- * свечение — отражённый свет снизу, как у капли на столе.
+ * Стык — самое важное. Без него получается обычный градиент, а не
+ * Frutiger Aero: в том стиле блик всегда обрывается резко, будто свет
+ * отражается от изогнутой поверхности и на середине уходит.
  *
- * Обычные View, без градиентов: expo-linear-gradient — нативный модуль,
- * а такие нельзя доставить обновлением по воздуху. Двух полупрозрачных
- * слоёв для этого эффекта достаточно.
+ * Слои снизу вверх:
+ *   1. заливка самого элемента (его backgroundColor);
+ *   2. блик по верхним 46% — белый 95%;
+ *   3. нижняя половина с 47% — белый 28%, отражённый свет;
+ *   4. волосяная белая линия по верхней кромке (в вебе это inset 0 1px 0).
+ *
+ * Всё обычными View. Честный градиент дал бы мягче, но это
+ * expo-linear-gradient — нативный модуль, а такие не доставить
+ * обновлением по воздуху: пришлось бы пересобирать и переустанавливать
+ * приложение всем.
  */
 
 import React from 'react';
@@ -18,16 +25,27 @@ import { palette, radii, themeName } from '@/core/theme/tokens';
 interface Props {
   /** Скругление элемента, на котором лежит блик: должно совпадать. */
   radius?: number;
-  /** Какую долю высоты занимает блик. */
-  height?: `${number}%`;
-  /** Отражённый свет снизу. Для маленьких элементов не нужен. */
-  bottomGlow?: boolean;
+  /** Где обрывается блик. По макету — 46%. */
+  seam?: `${number}%`;
+  /** Нажатое состояние: блик уходит вниз, свет переворачивается. */
+  pressed?: boolean;
 }
 
-export function Gloss({ radius = radii.md, height = '52%', bottomGlow = true }: Props) {
+export function Gloss({ radius = radii.md, seam = '46%', pressed = false }: Props) {
   // В сумерках стекла нет вовсе: там границу держит чёрный контур,
   // и белое пятно поверх него выглядело бы грязью на бумаге.
   if (themeName === 'dusk') return null;
+
+  if (pressed) {
+    return (
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {/* Нажатие — инверсия: сверху тень, снизу свет. По макету
+            элемент при этом не съезжает вниз: стекло не ездит. */}
+        <View style={[styles.pressedTop, { height: seam, borderRadius: radius }]} />
+        <View style={[styles.pressedBottom, { borderRadius: radius }]} />
+      </View>
+    );
+  }
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -35,27 +53,31 @@ export function Gloss({ radius = radii.md, height = '52%', bottomGlow = true }: 
         style={[
           styles.top,
           {
-            height,
+            height: seam,
             borderTopLeftRadius: radius,
             borderTopRightRadius: radius,
-            // Нижние углы блика скруглены сильнее: так его край читается
-            // как отражение, а не как вторая кнопка внутри кнопки.
-            borderBottomLeftRadius: radius * 1.6,
-            borderBottomRightRadius: radius * 1.6,
           },
         ]}
       />
 
-      {bottomGlow && (
-        <View
-          style={[
-            styles.bottom,
-            { borderBottomLeftRadius: radius, borderBottomRightRadius: radius },
-          ]}
-        />
-      )}
+      {/* Начинается на процент ниже — тот самый разрыв, из которого
+          и получается стеклянная, а не «залитая» поверхность. */}
+      <View
+        style={[
+          styles.bottom,
+          { top: seamPlusOne(seam), borderBottomLeftRadius: radius, borderBottomRightRadius: radius },
+        ]}
+      />
+
+      <View style={[styles.hairline, { borderTopLeftRadius: radius, borderTopRightRadius: radius }]} />
     </View>
   );
+}
+
+/** «46%» -> «47%»: единица разрыва, ради которой всё и затевалось. */
+function seamPlusOne(seam: `${number}%`): `${number}%` {
+  const value = Number.parseFloat(seam);
+  return `${Number.isFinite(value) ? value + 1 : 47}%`;
 }
 
 const styles = StyleSheet.create({
@@ -65,7 +87,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: '22%',
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  hairline: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  pressedTop: { backgroundColor: 'rgba(5, 54, 79, 0.10)' },
+  pressedBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '46%',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
 });
