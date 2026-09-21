@@ -16,7 +16,7 @@ import type { LngLat } from '@/core/geo/mercator';
 export interface FriendVisit extends LngLat {
   id: string;
   title: string;
-  type: 'cafe' | 'park' | 'viewpoint';
+  type: 'cafe' | 'park' | 'viewpoint' | 'landmark';
   /** Unix-время визита, миллисекунды. */
   visitedAt: number;
 }
@@ -38,6 +38,14 @@ export interface Friend {
   /** null — друг не делится позицией прямо сейчас. */
   position: FriendPosition | null;
   visits: FriendVisit[];
+  /**
+   * Сколько метров друг прошёл за последние семь дней. null — он ещё
+   * ни разу не присылал это число (старая версия приложения или просто
+   * не выходил на связь).
+   */
+  weekM: number | null;
+  /** Когда это число посчитали на его телефоне. */
+  weekAt: number | null;
 }
 
 export interface FriendsProvider {
@@ -59,6 +67,12 @@ export interface FriendsProvider {
 
   /** Отправить свою позицию. Частоту решает вызывающий, см. publish.ts. */
   publishPosition?(point: LngLat): Promise<void>;
+  /**
+   * Отправить, сколько прошёл за неделю. Одно число, без маршрута:
+   * след перемещений на сервере — совсем другой уровень ответственности
+   * за чужие данные, и заводить его ради полоски незачем.
+   */
+  publishWeek?(meters: number): Promise<void>;
   /** Код, который диктуют другу. */
   inviteCode?(): Promise<string | null>;
   /** Связаться с другом по его коду. Бросает понятную ошибку. */

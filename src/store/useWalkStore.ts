@@ -43,6 +43,8 @@ import { fetchNearbyPlaces } from '@/features/places/nearby';
 import { restoreWalk } from '@/core/walk/restore';
 import { isWalkResumable } from '@/core/walk/session';
 import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
+import { publishWeekIfNeeded } from '@/features/friends/weekPublisher';
+import { totalsSince } from '@/core/walk/history';
 import { sharingSetting } from '@/features/friends/sharingSetting';
 import {
   decideAutoWalk,
@@ -234,6 +236,8 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     // Человек не должен искать кнопку, чтобы увидеть свой город на карте.
     void findPlacesOnce(set, get);
 
+    shareWeek();
+
     get().resume();
     get().watch();
   },
@@ -282,6 +286,10 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     });
 
     awardSessionXp(sessionId, distanceM, newCells, set, get);
+
+    // Друзьям — только что обновившийся недельный итог. Именно здесь,
+    // а не по таймеру: это тот момент, когда пройденное хочется показать.
+    shareWeek({ force: true });
 
     clearActiveWalk();
     resetPublisher();
@@ -661,6 +669,20 @@ async function findPlacesOnce(
       subtitle: 'Достопримечательности видны на карте — можно дойти',
     },
   });
+}
+
+/**
+ * Поделиться недельным итогом.
+ *
+ * Считается по местным суткам из истории прогулок, отправляется одним
+ * числом. Частоту решает publishWeekIfNeeded: без принуждения — не чаще
+ * раза в три часа.
+ */
+function shareWeek(options: { force?: boolean } = {}): void {
+  if (!origin) return;
+
+  const week = totalsSince(repo.listWalks(), 7, Date.now());
+  publishWeekIfNeeded(origin, week.distanceM, options);
 }
 
 function discoverPlacesAt(

@@ -137,6 +137,14 @@ export default function ProfileScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/week" asChild>
+          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
+            <Feather name="bar-chart-2" size={18} color={palette.textDark} />
+            <Text style={styles.friendsText}>НЕДЕЛЯ С ДРУЗЬЯМИ</Text>
+            <Feather name="chevron-right" size={18} color={palette.textDark} />
+          </Pressable>
+        </Link>
+
         <Link href="/friends" asChild>
           <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
             <Feather name="users" size={18} color={palette.textDark} />

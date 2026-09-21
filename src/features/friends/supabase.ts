@@ -51,6 +51,8 @@ interface ProfileRow {
   id: string;
   display_name: string | null;
   avatar: string | null;
+  week_m: number | null;
+  week_at: string | null;
 }
 interface PositionRow {
   user_id: string;
@@ -143,7 +145,10 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     // Три запроса вместо джойна: политики доступа всё равно отсекут чужое,
     // а так проще читать и проще переносить на любой другой бэкенд.
     const [profiles, positions, visits] = await Promise.all([
-      this.client.from('profiles').select('id, display_name, avatar').in('id', ids),
+      this.client
+        .from('profiles')
+        .select('id, display_name, avatar, week_m, week_at')
+        .in('id', ids),
       this.client.from('positions').select('user_id, lat, lng, updated_at').in('user_id', ids),
       this.client
         .from('place_visits')
@@ -170,6 +175,8 @@ export class SupabaseFriendsProvider implements FriendsProvider {
         position: position
           ? { lat: position.lat, lng: position.lng, updatedAt: Date.parse(position.updated_at) }
           : null,
+        weekM: profile?.week_m ?? null,
+        weekAt: profile?.week_at ? Date.parse(profile.week_at) : null,
         visits: visitRows
           .filter((v) => v.user_id === friendId)
           .map((v) => ({
@@ -323,6 +330,21 @@ export class SupabaseFriendsProvider implements FriendsProvider {
 
     this.refresh();
     return stored;
+  }
+
+  /** Сколько прошёл за неделю — одним числом, без маршрута. */
+  async publishWeek(meters: number): Promise<void> {
+    const userId = await this.ensureSession();
+    if (!userId) return;
+
+    const { error } = await this.client
+      .from('profiles')
+      .update({ week_m: Math.max(0, Math.round(meters)), week_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    // Молча: это фоновая мелочь, и ронять из-за неё прогулку нельзя.
+    // Чаще всего причина — не выполненный ещё docs/supabase/6-week.sql.
+    if (error) console.warn('[friends] неделя не отправилась', error.message);
   }
 
   /** Код, который диктуют другу. */

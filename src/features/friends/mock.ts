@@ -89,6 +89,10 @@ function buildFriends(origin: LngLat, at: number): Friend[] {
         lng: origin.lng + orbit.radiusDeg * Math.cos(angle) * lngScale,
         updatedAt: at,
       },
+      // Правдоподобная неделя: у каждого своя, но одна и та же от запуска
+      // к запуску — прыгающие числа выглядели бы поломкой.
+      weekM: 4000 + (orbit.id.length * 3700) % 21_000,
+      weekAt: at,
       visits: orbit.visits.map((visit, index) => ({
         id: `${orbit.id}-visit-${index}`,
         title: visit.title,
@@ -119,6 +123,10 @@ export class MockFriendsProvider implements FriendsProvider {
 
   /** Отправлять позицию некуда, но и падать незачем. */
   publishPosition(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  publishWeek(): Promise<void> {
     return Promise.resolve();
   }
 

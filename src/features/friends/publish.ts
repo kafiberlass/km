@@ -33,3 +33,18 @@ export function shouldPublish(
   if (haversineMeters(previous.point, next) >= minDistanceM) return true;
   return now - previous.at >= minIntervalMs;
 }
+
+/**
+ * Когда отправлять свою неделю.
+ *
+ * Число меняется медленно, и частить незачем: раз в три часа, плюс сразу
+ * после прогулки — это ровно тот момент, когда только что пройденные
+ * километры хочется показать.
+ */
+export const WEEK_PUBLISH_EVERY_MS = 3 * 60 * 60 * 1000;
+
+export function shouldPublishWeek(lastAt: number | null, now: number, force: boolean): boolean {
+  if (force) return true;
+  if (lastAt == null) return true;
+  return now - lastAt >= WEEK_PUBLISH_EVERY_MS;
+}

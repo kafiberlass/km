@@ -35,6 +35,7 @@ const VISIT_ICONS: Record<FriendVisit['type'], keyof typeof Feather.glyphMap> = 
   cafe: 'coffee',
   park: 'sun',
   viewpoint: 'eye',
+  landmark: 'star',
 };
 
 interface Props {
