@@ -14,7 +14,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Blur,
   Canvas,
@@ -37,6 +37,7 @@ import type { LngLat } from '@/core/geo/mercator';
 import { palette } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { isFresh, type Friend } from '@/features/friends/types';
+import { Avatar } from '@/features/profile/Avatar';
 
 import { LAND_UNITS } from './landUnits';
 import {
@@ -66,7 +67,10 @@ const STAR_COUNT = 70;
  * отстоят на сотые доли градуса: без разведения метка друга оказывается
  * ровно под своей, и видно только одну.
  */
-const MARKER_GAP = 13;
+const MARKER_GAP = 26;
+
+/** Размер лица на планете. Больше — и два друга в одном городе слипнутся. */
+const FACE = 24;
 
 /** Какую долю пути до настоящего зума сглаженный проходит за кадр. */
 const SMOOTHING = 0.33;
@@ -79,11 +83,23 @@ interface Props {
   me: LngLat | null;
   /** Друзья с известной позицией — на шаре видно, кто где на Земле. */
   friends: readonly Friend[];
+  /** Своя аватарка и имя: на планете тоже должно быть видно, кто это. */
+  myAvatar?: string | null;
+  myName?: string | null;
   width: number;
   height: number;
 }
 
-export function GlobeOverlay({ camera, center, me, friends, width, height }: Props) {
+export function GlobeOverlay({
+  camera,
+  center,
+  me,
+  friends,
+  width,
+  height,
+  myAvatar = null,
+  myName = null,
+}: Props) {
   // Шаг доворота задаёт MapStack — он же решает, когда будить React.
   // Округлять здесь второй раз нельзя: полуградусные шаги превратились бы
   // обратно в целые, то есть ровно в те ступеньки, от которых уходили.
@@ -167,9 +183,27 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
    * между собой, а на планете все они оказываются в одной точке.
    */
   const pins = useMemo(() => {
-    const source: { key: string; color: string; live: boolean; self: boolean; at: LngLat }[] = [];
+    const source: {
+      key: string;
+      color: string;
+      live: boolean;
+      self: boolean;
+      at: LngLat;
+      avatar: string | null;
+      name: string;
+    }[] = [];
 
-    if (me) source.push({ key: 'me', color: palette.ember, live: true, self: true, at: me });
+    if (me) {
+      source.push({
+        key: 'me',
+        color: palette.ember,
+        live: true,
+        self: true,
+        at: me,
+        avatar: myAvatar,
+        name: myName ?? 'Я',
+      });
+    }
 
     for (const friend of friends) {
       if (!friend.position) continue;
@@ -181,6 +215,8 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
         live: isFresh(friend.position),
         self: false,
         at: friend.position,
+        avatar: friend.avatar,
+        name: friend.name,
       });
     }
 
@@ -191,7 +227,7 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
       visible.map(({ item, x, y }) => ({ ...item, x, y })),
       MARKER_GAP,
     );
-  }, [me, friends, view]);
+  }, [me, friends, view, myAvatar, myName]);
 
   /**
    * Сглаженный зум — только для анимации перехода.
@@ -233,6 +269,12 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
   // и подрастает. Оба значения считаются в UI-потоке каждый кадр.
   const bodyOpacity = useDerivedValue(() => globeOpacity(smoothZoom.value));
   const bodyTransform = useDerivedValue(() => [{ scale: globeScale(smoothZoom.value) }]);
+
+  // Лица живут вне канваса, но подчиняются той же анимации.
+  const faceStyle = useAnimatedStyle(() => ({
+    opacity: globeOpacity(smoothZoom.value),
+    transform: [{ scale: globeScale(smoothZoom.value) }],
+  }));
 
   return (
     <Animated.View style={[styles.wrap, style]} pointerEvents="none">
@@ -308,36 +350,36 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
             />
           </Circle>
 
-          {pins.map((pin) => (
-            <Group key={pin.key}>
-              <Circle
-                cx={pin.x}
-                cy={pin.y}
-                r={pin.self ? 13 : 10}
-                color={pin.color}
-                opacity={pin.live ? 0.35 : 0.15}
-              />
-              {/* Тёмная обводка: без неё светлая метка теряется на суше,
-                  а тёмная — в тени по краю шара. */}
-              <Circle
-                cx={pin.x}
-                cy={pin.y}
-                r={pin.self ? 6 : 5.5}
-                color={palette.ink}
-                opacity={pin.live ? 0.9 : 0.4}
-              />
-              <Circle
-                cx={pin.x}
-                cy={pin.y}
-                r={pin.self ? 4.5 : 4}
-                color={pin.color}
-                opacity={pin.live ? 1 : 0.5}
-              />
-            </Group>
-          ))}
-
         </Group>
       </Canvas>
+
+      {/*
+        Лица — обычными View поверх канваса, а не внутри него: Skia рисует
+        фигуры, а аватарка это картинка из сети или буквы шрифтом.
+
+        Слой масштабируется и гаснет теми же значениями, что и сам шар,
+        поэтому лица держатся своих точек на всех этапах перехода.
+        Масштаб View считается от центра, а центр слоя совпадает с центром
+        планеты, — иначе лица разъехались бы при подлёте.
+      */}
+      <Animated.View style={[StyleSheet.absoluteFill, faceStyle]} pointerEvents="none">
+        {pins.map((pin) => (
+          <View
+            key={pin.key}
+            style={[
+              styles.face,
+              {
+                left: pin.x - FACE / 2,
+                top: pin.y - FACE / 2,
+                borderColor: pin.color,
+                opacity: pin.live ? 1 : 0.45,
+              },
+            ]}
+          >
+            <Avatar value={pin.avatar} size={FACE - 4} name={pin.name} />
+          </View>
+        ))}
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -381,6 +423,15 @@ function buildStars(width: number, height: number, disc: Disc): Star[] {
 }
 
 const styles = StyleSheet.create({
+  face: {
+    position: 'absolute',
+    width: FACE,
+    height: FACE,
+    borderRadius: FACE / 2,
+    borderWidth: 2,
+    overflow: 'hidden',
+    backgroundColor: palette.fog,
+  },
   wrap: {
     position: 'absolute',
     top: 0,

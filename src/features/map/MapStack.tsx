@@ -231,6 +231,8 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
           friends={friends}
           width={size.width}
           height={size.height}
+          myAvatar={myAvatar}
+          myName={myName}
         />
       )}
 
