@@ -8,13 +8,16 @@ import {
   GLOBE_ZOOM_FULL,
   GLOBE_ZOOM_NONE,
   GLOBE_ZOOM_START,
+  SPACE_ZOOM_FULL,
   globeMarkers,
   globeOpacity,
   globeScale,
   globeTrig,
   graticule,
   projectGlobe,
+  globeBackdropRadius,
   projectUnit,
+  skyRadius,
   unitOf,
   smoothstep,
   spreadMarkers,
@@ -86,17 +89,18 @@ describe('перетекание карты в планету', () => {
 });
 
 describe('две фазы перехода', () => {
-  // Главное свойство всей анимации: карта и планета не видны
-  // одновременно. Пока они накладывались, это выглядело браком.
-  it('пока шар хоть немного виден, карта уже полностью скрыта небом', () => {
+  // Главное свойство: сквозь планету не должно просвечивать карту.
+  // Держит это подложка — круг, который проявляется вместе с шаром.
+  it('под шаром всегда есть своя подложка', () => {
     for (let zoom = GLOBE_ZOOM_NONE + 1; zoom >= 0; zoom -= 0.05) {
-      if (globeOpacity(zoom) > 0) expect(spaceOpacity(zoom)).toBe(1);
+      if (globeOpacity(zoom) === 0) continue;
+      expect(globeBackdropRadius(zoom, DISC)).toBeGreaterThanOrEqual(DISC * globeScale(zoom));
     }
   });
 
-  it('небо проявляется раньше шара', () => {
+  it('шар начинает проявляться сразу, а не после чёрного экрана', () => {
     expect(GLOBE_ZOOM_START).toBeLessThan(GLOBE_ZOOM_NONE);
-    expect(spaceOpacity(GLOBE_ZOOM_START)).toBe(1);
+    expect(spaceOpacity(SPACE_ZOOM_FULL)).toBe(1);
     expect(globeOpacity(GLOBE_ZOOM_START)).toBe(0);
   });
 
@@ -193,6 +197,43 @@ describe('метки на планете', () => {
   it('поворот планеты меняет состав видимых меток', () => {
     const markers = globeMarkers(items, { ...view, lng0: 160 }, (item) => item.position);
     expect(markers.map((marker) => marker.item.id)).toEqual(['за горизонтом']);
+  });
+});
+
+/** Телефон 390×844: половина диагонали и радиус диска планеты. */
+const COVER = Math.hypot(390, 844) / 2;
+const DISC = (Math.min(390, 844) * 0.82) / 2;
+
+describe('переход карта — планета', () => {
+  it('карта видна, пока небо не разрослось', () => {
+    // Смысл всей переделки: между «карта погасла» и «шар появился»
+    // не должно быть кадра, где не видно ни того ни другого.
+    expect(skyRadius(GLOBE_ZOOM_NONE, COVER)).toBe(0);
+    expect(skyRadius(4.6, COVER)).toBeLessThan(COVER);
+  });
+
+  it('к концу перехода небо накрывает углы экрана', () => {
+    expect(skyRadius(SPACE_ZOOM_FULL, COVER)).toBeGreaterThanOrEqual(COVER);
+    expect(skyRadius(2.5, COVER)).toBeGreaterThanOrEqual(COVER);
+  });
+
+  it('подложка под шаром всегда не меньше самого шара', () => {
+    // Иначе по краю планеты просвечивает карта — два изображения разом.
+    for (let zoom = 0; zoom <= 5; zoom += 0.05) {
+      expect(globeBackdropRadius(zoom, DISC)).toBeGreaterThanOrEqual(DISC * globeScale(zoom));
+    }
+  });
+
+  it('в середине экрана никогда не бывает пусто', () => {
+    // Раньше между «карта погасла» и «шар появился» был кадр, где не
+    // видно ни того ни другого: пустой синий экран.
+    for (let zoom = 0; zoom <= GLOBE_ZOOM_NONE; zoom += 0.05) {
+      const darkCircle = skyRadius(zoom, COVER);
+      const planet = globeOpacity(zoom) > 0;
+      const mapVisible = darkCircle < COVER;
+
+      expect(planet || mapVisible).toBe(true);
+    }
   });
 });
 

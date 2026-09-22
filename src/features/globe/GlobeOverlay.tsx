@@ -22,7 +22,6 @@ import {
   Group,
   Path,
   RadialGradient,
-  Rect,
   Skia,
   vec,
 } from '@shopify/react-native-skia';
@@ -41,6 +40,7 @@ import { isFresh, type Friend } from '@/features/friends/types';
 
 import { LAND_UNITS } from './landUnits';
 import {
+  GLOBE_ZOOM_NONE,
   globeMarkers,
   globeOpacity,
   globeScale,
@@ -48,6 +48,8 @@ import {
   graticule,
   projectGlobe,
   projectUnit,
+  globeBackdropRadius,
+  skyRadius,
   spaceOpacity,
   spreadMarkers,
   type GlobeView,
@@ -90,6 +92,12 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
 
   // Диск отдельно от ориентации: при повороте планеты он не меняется,
   // и всё, что зависит только от него (звёзды), пересобирать незачем.
+  /**
+   * До какого радиуса растить небо: половина диагонали, чтобы круг
+   * накрыл и углы экрана.
+   */
+  const coverRadius = useMemo(() => Math.hypot(width, height) / 2, [width, height]);
+
   const disc = useMemo(
     () => ({
       cx: width / 2,
@@ -208,10 +216,18 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
     smoothZoom.value = Math.abs(target - next) < 0.001 ? target : next;
   });
 
-  // Небо появляется первым и к началу проявления шара уже непрозрачно:
-  // иначе сквозь материки просвечивают тайлы карты и две картинки
-  // накладываются друг на друга.
-  const style = useAnimatedStyle(() => ({ opacity: spaceOpacity(smoothZoom.value) }));
+  /*
+    Канвас виден всё время, пока смонтирован: гасить его целиком нельзя,
+    иначе вместе с небом исчезает и шар. Прозрачностью управляет то, что
+    нарисовано внутри.
+  */
+  const style = useAnimatedStyle(() => ({ opacity: smoothZoom.value < GLOBE_ZOOM_NONE ? 1 : 0 }));
+
+  // Круг неба растёт из середины экрана. Вокруг него всё это время
+  // видна карта — ради этого всё и затевалось.
+  const skyR = useDerivedValue(() => skyRadius(smoothZoom.value, coverRadius));
+  const backdropR = useDerivedValue(() => globeBackdropRadius(smoothZoom.value, view.r));
+  const starsOpacity = useDerivedValue(() => spaceOpacity(smoothZoom.value));
 
   // Шар живёт своей анимацией внутри уже чёрного неба: проявляется
   // и подрастает. Оба значения считаются в UI-потоке каждый кадр.
@@ -221,20 +237,29 @@ export function GlobeOverlay({ camera, center, me, friends, width, height }: Pro
   return (
     <Animated.View style={[styles.wrap, style]} pointerEvents="none">
       <Canvas style={StyleSheet.absoluteFill}>
-        {/* Космос кроет плоскую карту целиком — иначе тайлы просвечивали бы
-            сквозь океан и вся иллюзия шара рассыпалась. */}
-        <Rect x={0} y={0} width={width} height={height} color={palette.fog} />
+        {/* Подложка под планетой проявляется вместе с ней: пока шар
+            полупрозрачен, сквозь него не видно карту, а пока шара нет —
+            нет и тёмного пятна. */}
+        <Group opacity={bodyOpacity}>
+          <Circle cx={view.cx} cy={view.cy} r={backdropR} color={palette.fog} />
+        </Group>
 
-        {stars.map((star, index) => (
-          <Circle
-            key={index}
-            cx={star.x}
-            cy={star.y}
-            r={star.r}
-            color={palette.parchment}
-            opacity={star.opacity}
-          />
-        ))}
+        {/* А это космос вокруг планеты: растёт кругом из середины, и пока
+            он мал, по краям экрана видна карта. */}
+        <Circle cx={view.cx} cy={view.cy} r={skyR} color={palette.fog} />
+
+        <Group opacity={starsOpacity}>
+          {stars.map((star, index) => (
+            <Circle
+              key={index}
+              cx={star.x}
+              cy={star.y}
+              r={star.r}
+              color={palette.parchment}
+              opacity={star.opacity}
+            />
+          ))}
+        </Group>
 
         <Group opacity={bodyOpacity} origin={vec(view.cx, view.cy)} transform={bodyTransform}>
           {/* Атмосфера: размытое кольцо чуть больше диска. */}
