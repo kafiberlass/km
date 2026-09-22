@@ -190,6 +190,18 @@ function PersonMarker({
 }) {
   const size = person.self ? HALO : AVATAR;
 
+  /*
+    Куда метка «упирается» в карту.
+
+    У круга это его середина, у капли — носик. Поэтому метка друга
+    сдвигается вверх на всю высоту капли: иначе точка оказывается в её
+    середине, и человек стоит на полметки ниже, чем нарисовано.
+
+    У своей метки носик выведен в середину ореола (см. selfRow), поэтому
+    ей хватает обычного центрирования.
+  */
+  const anchorY = person.self ? size / 2 : AVATAR * 1.3;
+
   const style = useAnimatedStyle(() => {
     const screen = layout.value[index];
     if (!screen) return { opacity: 0 };
@@ -205,7 +217,7 @@ function PersonMarker({
 
     return {
       opacity: visible ? 1 : 0,
-      transform: [{ translateX: screen.x - size / 2 }, { translateY: screen.y - size / 2 }],
+      transform: [{ translateX: screen.x - size / 2 }, { translateY: screen.y - anchorY }],
     };
   });
 
@@ -318,10 +330,20 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: palette.ember,
   },
-  selfRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  // Носик капли приходится ровно на середину ореола — то есть на точку,
+  // где человек стоит.
+  selfRow: {
+    position: 'absolute',
+    bottom: HALO / 2,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
   stacked: { marginTop: 4 },
   togetherText: {
-    marginTop: 2,
+    position: 'absolute',
+    top: HALO / 2 + 2,
+    width: 160,
+    textAlign: 'center',
     color: palette.textOnMap,
     fontSize: text.tab,
     fontFamily: fonts.display,
