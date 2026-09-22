@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { allPlaces, getProfile, removeDemoPlaces, upsertPlaces } from '@/core/db/repo';
 import { haversineMeters } from '@/core/geo/mercator';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { placeKind } from '@/features/places/kinds';
 import { fetchNearbyPlaces } from '@/features/places/nearby';
 import { QuestCard } from '@/features/quests/QuestCard';
@@ -214,14 +214,14 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontFamily: fonts.display,
     fontWeight: '900',
-    fontSize: 13,
+    fontSize: text.body,
     letterSpacing: 1,
   },
   rangeTextActive: { color: palette.textDark },
-  searchHint: { color: palette.textMuted, fontSize: 12, fontFamily: fonts.body },
+  searchHint: { color: palette.textMuted, fontSize: text.meta, fontFamily: fonts.body },
   searchMessage: {
     color: palette.textDark,
-    fontSize: 13,
+    fontSize: text.body,
     fontFamily: fonts.display,
     fontWeight: '700',
   },
@@ -251,14 +251,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeHidden: { backgroundColor: '#B6A883', borderColor: palette.textMuted },
+  badgeHidden: { backgroundColor: palette.sand, borderColor: palette.edgeSoft },
   body: { flex: 1, gap: 2 },
-  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
-  titleHidden: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
+  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle, letterSpacing: 0.5 },
+  titleHidden: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
   subtitle: {
     fontFamily: fonts.body,
     color: palette.textMuted,
-    fontSize: 11,
+    fontSize: text.meta,
     letterSpacing: 0.8,
     fontVariant: ['tabular-nums'],
   },

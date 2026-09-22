@@ -35,7 +35,7 @@ import {
 } from '@/features/friends';
 import { Avatar } from '@/features/profile/Avatar';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
-import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing, text } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 
@@ -432,10 +432,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dim: { opacity: 0.55 },
-  avatarText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', fontSize: 15 },
-  name: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  avatarText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', fontSize: text.rowTitle },
+  name: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle, letterSpacing: 0.5 },
   status: {
-    fontFamily: fonts.body, color: palette.textMuted, fontSize: 11, letterSpacing: 0.8 },
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: text.label, letterSpacing: 0.8 },
   dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: palette.edgeSoft },
   dotLive: { backgroundColor: palette.ember },
   dotStale: { backgroundColor: palette.sand },
@@ -462,9 +462,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  visitTitle: { flex: 1, color: palette.textDark, fontFamily: fonts.display, fontWeight: '800', fontSize: 13 },
+  visitTitle: { flex: 1, color: palette.textDark, fontFamily: fonts.display, fontWeight: '800', fontSize: text.body },
   visitTime: {
-    fontFamily: fonts.body, color: palette.textMuted, fontSize: 11 },
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: text.label },
 
   cardTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   code: {
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   hint: {
-    fontFamily: fonts.body, color: palette.textMuted, fontSize: 12, lineHeight: 17 },
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: text.meta, lineHeight: 17 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   input: {
     flex: 1,

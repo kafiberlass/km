@@ -10,7 +10,7 @@ import { migrate } from '@/core/db/client';
 import { describeError, rememberError } from '@/core/errors/lastError';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { seedDemoPlaces } from '@/features/places/seed';
-import { fonts, palette } from '@/core/theme/tokens';
+import { fonts, palette, text } from '@/core/theme/tokens';
 import { useWalkStore } from '@/store/useWalkStore';
 
 /**
@@ -130,6 +130,6 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: palette.fog,
   },
-  errorTitle: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 18, marginBottom: 8 },
+  errorTitle: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle, marginBottom: 8 },
   errorBody: { color: palette.parchment, textAlign: 'center' },
 });

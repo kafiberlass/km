@@ -14,7 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { formatSize } from '@/features/map/offlineArea';
 import {
   currentPackProgress,
@@ -189,9 +189,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
-    fontSize: 12,
+    fontSize: text.meta,
   },
-  body: { color: palette.textDark, fontFamily: fonts.body, fontSize: 13 },
+  body: { color: palette.textDark, fontFamily: fonts.body, fontSize: text.body },
 
   radii: { flexDirection: 'row', gap: spacing.sm },
   radius: {
@@ -226,5 +226,5 @@ const styles = StyleSheet.create({
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   error: { color: palette.rust, fontFamily: fonts.display, fontWeight: '700', flex: 1 },
 
-  note: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 12 },
+  note: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.meta },
 });

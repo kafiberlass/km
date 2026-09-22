@@ -10,7 +10,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 
 import type { TodayQuest } from './today';
 
@@ -109,12 +109,12 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontFamily: fonts.display,
     fontWeight: '900',
-    fontSize: 11,
+    fontSize: text.label,
     letterSpacing: 1,
   },
-  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
-  reward: { color: palette.emberDeep, fontFamily: fonts.mono, fontSize: 16 },
-  hint: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 12 },
+  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
+  reward: { color: palette.emberDeep, fontFamily: fonts.mono, fontSize: text.cardTitle },
+  hint: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.meta },
   track: {
     height: 10,
     borderRadius: 5,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   progress: {
     color: palette.textDark,
     fontFamily: fonts.mono,
-    fontSize: 13,
+    fontSize: text.body,
     fontVariant: ['tabular-nums'],
   },
 
@@ -151,12 +151,12 @@ const styles = StyleSheet.create({
     color: palette.textDark,
     fontFamily: fonts.display,
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: text.meta,
   },
   compactValue: {
     color: palette.emberDeep,
     fontFamily: fonts.mono,
-    fontSize: 12,
+    fontSize: text.meta,
     fontVariant: ['tabular-nums'],
   },
 });

@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { fonts, line, palette } from '@/core/theme/tokens';
+import { fonts, line, palette, text } from '@/core/theme/tokens';
 
 /**
  * Размеры кнопок — из макета: плитка 58 в высоту, скругление 15,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 3,
   },
   label: {
-    fontSize: 9.5,
+    fontSize: text.tab,
     fontFamily: fonts.display,
     fontWeight: '700',
     letterSpacing: 0.3,

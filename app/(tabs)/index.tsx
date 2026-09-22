@@ -17,7 +17,7 @@ import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
-import { fonts, line, palette, pressStyle, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, spacing, text } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { isServerConfigured, useFriends } from '@/features/friends';
@@ -350,5 +350,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   liveRow: { alignItems: 'center', gap: 2 },
-  liveText: { color: palette.parchment, fontSize: 12, fontVariant: ['tabular-nums'] },
+  liveText: { color: palette.parchment, fontSize: text.meta, fontVariant: ['tabular-nums'] },
 });

@@ -17,7 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { fonts, line, palette, radii, shadow, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, shadow, spacing, text } from '@/core/theme/tokens';
 import { Gloss } from './Gloss';
 
 export function XpBar({
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     top: 4,
     color: palette.textDark,
-    fontSize: 14,
+    fontSize: text.body,
     fontWeight: '700',
     fontFamily: fonts.mono,
     letterSpacing: 1,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toastBody: { flex: 1 },
-  toastTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
+  toastTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
   toastSubtitle: { color: palette.textMuted, marginTop: 2, fontVariant: ['tabular-nums'] },
   toastClose: {
     width: 36,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toastCloseText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
+  toastCloseText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
 
   button: {
     paddingHorizontal: spacing.xl,
@@ -269,10 +269,10 @@ const styles = StyleSheet.create({
   },
   statValue: {
     color: palette.textDark,
-    fontSize: 22,
+    fontSize: text.value,
     fontFamily: fonts.display,
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
-  statLabel: { color: palette.textMuted, marginTop: 2, fontSize: 12, letterSpacing: 1 },
+  statLabel: { color: palette.textMuted, marginTop: 2, fontSize: text.label, letterSpacing: 1 },
 });

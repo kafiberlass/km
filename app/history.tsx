@@ -22,7 +22,7 @@ import {
   totalsOf,
   totalsSince,
 } from '@/core/walk/history';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { Stat } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -171,8 +171,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: line,
     borderBottomColor: palette.ink,
   },
-  dayTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 13, letterSpacing: 0.5 },
-  dayTotal: { color: palette.emberDeep, fontFamily: fonts.mono, fontSize: 16 },
+  dayTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.body, letterSpacing: 0.5 },
+  dayTotal: { color: palette.emberDeep, fontFamily: fonts.mono, fontSize: text.cardTitle },
 
   walk: {
     flexDirection: 'row',
@@ -191,15 +191,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  walkTime: { color: palette.textMuted, fontFamily: fonts.mono, fontSize: 15, width: 52 },
+  walkTime: { color: palette.textMuted, fontFamily: fonts.mono, fontSize: text.rowTitle, width: 52 },
   walkDistance: {
     color: palette.textDark,
     fontFamily: fonts.display,
     fontWeight: '900',
-    fontSize: 15,
+    fontSize: text.rowTitle,
     width: 70,
   },
-  walkMeta: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 12, flex: 1 },
+  walkMeta: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.meta, flex: 1 },
 
   empty: {
     alignItems: 'center',
@@ -210,6 +210,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: palette.textMuted,
   },
-  emptyTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
-  emptyBody: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center' },
+  emptyTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
+  emptyBody: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.body, textAlign: 'center' },
 });

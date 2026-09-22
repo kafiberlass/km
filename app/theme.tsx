@@ -21,7 +21,7 @@ import {
   writeChoice,
   type ThemeChoice,
 } from '@/core/theme/choice';
-import { fonts, line, palette, radii, shadow, spacing, themeName } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, shadow, spacing, text, themeName } from '@/core/theme/tokens';
 import { restartApp } from '@/features/updates/ota';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -31,7 +31,7 @@ const OPTIONS: readonly { value: ThemeChoice; title: string; hint: string; color
     value: 'aqua',
     title: 'Аква',
     hint: 'Вода, стекло и блики. Светлая.',
-    colors: ['#35A9E8', '#66D3FA', '#FFFFFF'],
+    colors: ['#1591CE', '#8AD9F5', '#FFFFFF'],
   },
   {
     value: 'dusk',
@@ -43,7 +43,7 @@ const OPTIONS: readonly { value: ThemeChoice; title: string; hint: string; color
     value: 'system',
     title: 'Как в телефоне',
     hint: 'Днём аква, ночью сумерки — следом за настройками системы.',
-    colors: ['#66D3FA', '#6B5544', '#E9A83C'],
+    colors: ['#8AD9F5', '#6B5544', '#E9A83C'],
   },
 ];
 
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   body: { flex: 1, gap: 2 },
-  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
-  hint: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 12 },
-  note: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 12 },
+  title: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
+  hint: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.meta },
+  note: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.meta },
 });

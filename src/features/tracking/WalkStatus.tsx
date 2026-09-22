@@ -12,7 +12,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
-import { fonts, line, palette, pressStyle, radii, shadow, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, shadow, spacing, text } from '@/core/theme/tokens';
 import { useAlwaysSharing } from '@/features/friends';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -112,8 +112,8 @@ const styles = StyleSheet.create({
   },
   idleText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   divider: { width: 1, height: 16, backgroundColor: palette.textMuted, opacity: 0.4 },
-  sharingText: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
-  deniedText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  sharingText: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: text.meta },
+  deniedText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: text.meta },
   // Стекло под подсказкой: под ней бывает и светлая земля, и тёмный
   // туман, и на одном из двух текст пропадал целиком.
   hintWrap: {
@@ -125,6 +125,6 @@ const styles = StyleSheet.create({
   hint: {
     fontFamily: fonts.body,
     color: palette.textDark,
-    fontSize: 12,
+    fontSize: text.meta,
   },
 });

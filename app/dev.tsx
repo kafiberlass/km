@@ -19,7 +19,7 @@ import { countCells } from '@/core/db/repo';
 import { clearLastError, readLastError } from '@/core/errors/lastError';
 import { DEFAULT_FILTER, filterTrack } from '@/core/geo/filter';
 import { parseGpx } from '@/core/geo/gpx';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { fogSetting, useFogEnabled } from '@/features/fog/fogSetting';
 import { MockTrackingProvider } from '@/features/tracking/mock';
 import { ActionButton, Stat } from '@/ui/widgets';
@@ -207,7 +207,7 @@ export default function DevScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.fog },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
-  heading: { color: palette.textOnDark, fontSize: 24, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 2 },
+  heading: { color: palette.textOnDark, fontSize: text.screen, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 2 },
   subheading: { color: palette.parchment, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   crash: {
@@ -222,10 +222,10 @@ const styles = StyleSheet.create({
     color: palette.rust,
     fontFamily: fonts.display,
     fontWeight: '900',
-    fontSize: 12,
+    fontSize: text.meta,
     letterSpacing: 1,
   },
-  crashText: { color: palette.textDark, fontFamily: fonts.mono, fontSize: 12 },
+  crashText: { color: palette.textDark, fontFamily: fonts.mono, fontSize: text.meta },
   logBox: {
     marginTop: spacing.md,
     padding: spacing.md,
@@ -236,5 +236,5 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   logEmpty: { color: palette.textMuted },
-  logLine: { color: palette.parchment, fontSize: 12, fontFamily: fonts.mono },
+  logLine: { color: palette.parchment, fontSize: text.meta, fontFamily: fonts.mono },
 });

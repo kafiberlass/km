@@ -13,7 +13,7 @@ import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { fonts, line, palette, radii, shadow, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, shadow, spacing, text } from '@/core/theme/tokens';
 import { Avatar } from '@/features/profile/Avatar';
 import { Droplets } from './Droplets';
 import { SkyGradient } from './SkyGradient';
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   titleBlock: { flex: 1 },
   title: {
     color: palette.textDark,
-    fontSize: 20,
+    fontSize: text.cardTitle,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: fonts.body,
     color: palette.textDark,
-    fontSize: 12,
+    fontSize: text.meta,
     letterSpacing: 1.5,
     marginTop: 2,
     fontVariant: ['tabular-nums'],
@@ -169,5 +169,5 @@ const styles = StyleSheet.create({
     backgroundColor: palette.parchmentBright,
     ...shadow,
   },
-  streakValue: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
+  streakValue: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900', fontSize: text.cardTitle },
 });

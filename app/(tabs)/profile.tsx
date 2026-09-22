@@ -11,7 +11,7 @@ import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { Avatar } from '@/features/profile/Avatar';
-import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing, text } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -268,8 +268,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  tileValue: { fontSize: 24, fontFamily: fonts.display, fontWeight: '900', fontVariant: ['tabular-nums'] },
-  tileLabel: { color: palette.textMuted, fontSize: 10, letterSpacing: 1, textAlign: 'center' },
+  tileValue: { fontSize: text.value, fontFamily: fonts.display, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  tileLabel: { color: palette.textMuted, fontSize: text.label, letterSpacing: 1, textAlign: 'center' },
 
   card: {
     padding: spacing.md,

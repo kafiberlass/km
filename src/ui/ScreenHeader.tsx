@@ -14,7 +14,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, line, palette, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, spacing, text } from '@/core/theme/tokens';
 import { Droplets } from './Droplets';
 import { SkyGradient } from './SkyGradient';
 import { GrassLine } from './GrassLine';
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   centeredText: { textAlign: 'center' },
   title: {
     color: palette.textDark,
-    fontSize: 24,
+    fontSize: text.screen,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: fonts.body,
     color: palette.textMuted,
-    fontSize: 12,
+    fontSize: text.meta,
     letterSpacing: 1.5,
     fontVariant: ['tabular-nums'],
     textShadowColor: 'rgba(255, 255, 255, 0.7)',

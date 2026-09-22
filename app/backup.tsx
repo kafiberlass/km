@@ -18,7 +18,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 
 import { collectBackup, restoreBackup } from '@/core/db/backup';
 import { backupFileName, parseBackup, summarize } from '@/core/backup/format';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton, Stat } from '@/ui/widgets';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -206,9 +206,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
-    fontSize: 12,
+    fontSize: text.meta,
   },
-  body: { color: palette.textDark, fontFamily: fonts.body, fontSize: 13 },
+  body: { color: palette.textDark, fontFamily: fonts.body, fontSize: text.body },
   message: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ok: { color: palette.teal, fontFamily: fonts.display, fontWeight: '700', flex: 1 },
   error: { color: palette.rust, fontFamily: fonts.display, fontWeight: '700', flex: 1 },

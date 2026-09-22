@@ -15,7 +15,7 @@ import { router } from 'expo-router';
 import { getProfile, listWalks } from '@/core/db/repo';
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { deviceTimeZone } from '@/core/rules/streak';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { totalsSince } from '@/core/walk/history';
 import { buildBoard, formatWeekDistance } from '@/features/friends/board';
 import { isServerConfigured, useFriends } from '@/features/friends';
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: palette.textMuted,
     fontFamily: fonts.mono,
-    fontSize: 16,
+    fontSize: text.cardTitle,
   },
   body: { flex: 1, gap: 4 },
   nameRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
@@ -146,9 +146,9 @@ const styles = StyleSheet.create({
     color: palette.textDark,
     fontFamily: fonts.display,
     fontWeight: '900',
-    fontSize: 15,
+    fontSize: text.rowTitle,
   },
-  value: { color: palette.emberDeep, fontFamily: fonts.mono, fontSize: 15 },
+  value: { color: palette.emberDeep, fontFamily: fonts.mono, fontSize: text.rowTitle },
   track: {
     height: 8,
     borderRadius: 4,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fill: { height: '100%' },
-  meta: { color: palette.textMuted, fontFamily: fonts.body, fontSize: 11 },
+  meta: { color: palette.textMuted, fontFamily: fonts.body, fontSize: text.label },
   note: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  noteText: { flex: 1, color: palette.textMuted, fontFamily: fonts.body, fontSize: 12 },
+  noteText: { flex: 1, color: palette.textMuted, fontFamily: fonts.body, fontSize: text.meta },
 });

@@ -21,7 +21,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
-import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing, text } from '@/core/theme/tokens';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { Avatar } from '@/features/profile/Avatar';
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.parchment,
     gap: spacing.sm,
   },
-  cardTitle: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  cardTitle: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: text.meta },
   input: {
     borderWidth: line,
     borderColor: palette.edgeSoft,
@@ -199,12 +199,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: palette.textDark,
-    fontSize: 16,
+    fontSize: text.cardTitle,
     fontFamily: fonts.display,
     fontWeight: '700',
   },
   hint: {
-    fontFamily: fonts.body, color: palette.textMuted, fontSize: 12 },
+    fontFamily: fonts.body, color: palette.textMuted, fontSize: text.meta },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tile: {
     width: 56,
