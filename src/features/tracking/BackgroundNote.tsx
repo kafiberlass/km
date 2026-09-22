@@ -9,7 +9,7 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 
-import { fonts, palette } from '@/core/theme/tokens';
+import { fonts, palette, radii, spacing } from '@/core/theme/tokens';
 import { useWalkStore } from '@/store/useWalkStore';
 
 export function BackgroundNote() {
@@ -44,12 +44,14 @@ export function BackgroundNote() {
 const styles = StyleSheet.create({
   ok: {
     fontFamily: fonts.body,
-    color: palette.textOnMap,
+    color: palette.textDark,
     fontSize: 12,
     textAlign: 'center',
-    textShadowColor: palette.mapHalo,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    backgroundColor: palette.glass,
+    overflow: 'hidden',
   },
   warn: { color: palette.gold, fontSize: 12, textAlign: 'center', fontFamily: fonts.display, fontWeight: '700' },
 });

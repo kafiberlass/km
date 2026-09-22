@@ -11,7 +11,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 
 import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
@@ -227,22 +227,21 @@ export default function MapScreen() {
                 />
               </Pressable>
 
-              <Link href="/dev" asChild>
+              <Pressable onPress={() => router.push('/dev')} hitSlop={spacing.sm}>
                 <Text style={styles.devLink}>DEV</Text>
-              </Link>
+              </Pressable>
             </View>
           </View>
 
-          <Link href="/map-full" asChild>
-            <Pressable
-              hitSlop={spacing.sm}
-              style={({ pressed }) => [styles.expand, pressed && styles.locatePressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть карту во весь экран"
-            >
-              <Feather name="maximize-2" size={24} color={palette.textDark} />
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push('/map-full')}
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [styles.expand, pressed && styles.locatePressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть карту во весь экран"
+          >
+            <Feather name="maximize-2" size={24} color={palette.textDark} />
+          </Pressable>
 
           <Pressable
             onPress={() => void centerOnMe()}
@@ -255,11 +254,12 @@ export default function MapScreen() {
           </Pressable>
 
           <View style={styles.overlayBottom} pointerEvents="box-none">
-            <Link href="/places" asChild>
-              <Pressable accessibilityRole="button" accessibilityLabel="Открыть квест дня">
-                <QuestCard today={quest} compact />
-              </Pressable>
-            </Link>
+            <Pressable
+              onPress={() => router.push('/places')}
+              accessibilityRole="button" accessibilityLabel="Открыть квест дня"
+            >
+              <QuestCard today={quest} compact />
+            </Pressable>
 
             {toast && (
               <Toast title={toast.title} subtitle={toast.subtitle} onDismiss={dismissToast} />

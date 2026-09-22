@@ -33,10 +33,12 @@ export default function TabsLayout() {
           { height: BAR_HEIGHT + bottomInset, paddingBottom: spacing.sm },
         ],
         tabBarItemStyle: styles.item,
-        tabBarActiveTintColor: palette.textOnDark,
-        tabBarInactiveTintColor: palette.textDark,
-        tabBarActiveBackgroundColor: palette.bark,
-        tabBarInactiveBackgroundColor: palette.parchment,
+        // Активная — лаймовая плитка с тёмно-зелёной подписью: то же
+        // сочетание, что у главной кнопки. Неактивные остаются стеклом.
+        tabBarActiveTintColor: palette.textOnLime,
+        tabBarInactiveTintColor: palette.textMuted,
+        tabBarActiveBackgroundColor: palette.ember,
+        tabBarInactiveBackgroundColor: palette.parchmentBright,
         tabBarLabelStyle: styles.label,
       }}
     >

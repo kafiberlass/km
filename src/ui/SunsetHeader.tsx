@@ -13,9 +13,10 @@ import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { fonts, palette, radii, shadow, spacing, skyBands } from '@/core/theme/tokens';
+import { fonts, line, palette, radii, shadow, spacing } from '@/core/theme/tokens';
 import { Avatar } from '@/features/profile/Avatar';
 import { Droplets } from './Droplets';
+import { SkyGradient } from './SkyGradient';
 import { GrassLine } from './GrassLine';
 
 interface Props {
@@ -49,9 +50,7 @@ export function SunsetHeader({
   return (
     <View style={[styles.root, { minHeight: topInset + MIN_BODY_HEIGHT }]}>
       <View style={styles.bands}>
-        {skyBands.map((color) => (
-          <View key={color} style={[styles.band, { backgroundColor: color }]} />
-        ))}
+        <SkyGradient />
         {/* Солнце: круг, наполовину утопленный за горизонт. */}
         <View style={styles.sun} />
         <View style={styles.horizon} />
@@ -87,7 +86,6 @@ export function SunsetHeader({
   );
 }
 
-const BAND_HEIGHT = 22;
 const SUN_SIZE = 78;
 const SUN_BOTTOM = 10;
 
@@ -98,7 +96,7 @@ const SUN_BOTTOM = 10;
  * плюс отступы) и места под солнце. Меньше нельзя: солнце начнёт
  * налезать на текст, а в макете оно встаёт строго под ним.
  */
-const MIN_BODY_HEIGHT = 150;
+const MIN_BODY_HEIGHT = 128;
 
 const styles = StyleSheet.create({
   root: {
@@ -109,7 +107,6 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   bands: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  band: { height: BAND_HEIGHT, width: '100%' },
   sun: {
     position: 'absolute',
     alignSelf: 'center',
@@ -164,10 +161,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: palette.edgeSoft,
-    backgroundColor: '#3A2A1E',
+    borderRadius: radii.pill,
+    borderWidth: line,
+    borderColor: palette.edge,
+    // Коричневый кусок прежнего оформления: на небе он читался как
+    // дырка. Теперь это стекло, как и всё остальное.
+    backgroundColor: palette.parchmentBright,
+    ...shadow,
   },
   streakValue: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
 });

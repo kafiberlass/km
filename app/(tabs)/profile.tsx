@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 
 import { resetDatabase } from '@/core/db/client';
 import { buildSnapshot, countCells, getProfile, unlockedAchievements } from '@/core/db/repo';
@@ -64,18 +64,17 @@ export default function ProfileScreen() {
         subtitle={`${levelTitle(level)} · уровень ${level} · ${streak} дней подряд`}
         topInset={insets.top}
         avatar={
-          <Link href="/profile-edit" asChild>
-            <Pressable
-              style={({ pressed }) => [styles.avatarTap, pressed && styles.settingsPressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Изменить имя и аватар"
-            >
-              <Avatar value={avatar} size={72} name={displayName} />
-              <View style={styles.avatarEdit}>
-                <Feather name="edit-2" size={12} color={palette.textDark} />
-              </View>
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push('/profile-edit')}
+            style={({ pressed }) => [styles.avatarTap, pressed && styles.settingsPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Изменить имя и аватар"
+          >
+            <Avatar value={avatar} size={72} name={displayName} />
+            <View style={styles.avatarEdit}>
+              <Feather name="edit-2" size={12} color={palette.textDark} />
+            </View>
+          </Pressable>
         }
       />
 
@@ -98,99 +97,108 @@ export default function ProfileScreen() {
         {/* Нажимается вся карточка, а не только ссылка «ВСЕ»: человек
             тянется к значкам и к плитке «+23» — именно они и выглядят
             как «покажи остальные». */}
-        <Link href="/achievements" asChild>
-          <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-            <View style={styles.cardHead}>
-              <Text style={styles.cardTitle}>ПОСЛЕДНИЕ АЧИВКИ</Text>
-              <Text style={styles.cardLink}>ВСЕ ›</Text>
+        <Pressable
+          onPress={() => router.push('/achievements')}
+          style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        >
+          <View style={styles.cardHead}>
+            <Text style={styles.cardTitle}>ПОСЛЕДНИЕ АЧИВКИ</Text>
+            <Text style={styles.cardLink}>ВСЕ ›</Text>
+          </View>
+
+          <View style={styles.badgeRow}>
+            {shown.map((achievement) => {
+              const badge = badgeFor(achievement.code);
+              return (
+                <View
+                  key={achievement.code}
+                  style={[styles.badge, { backgroundColor: badge.color }]}
+                >
+                  <Feather name={badge.icon} size={22} color={palette.parchmentBright} />
+                </View>
+              );
+            })}
+
+            {/* Пустая пунктирная плитка: сколько ещё ачивок не поместилось
+                или, пока их нет вовсе, сколько всего можно получить. */}
+            <View style={[styles.badge, styles.badgeMore]}>
+              <Text style={styles.badgeMoreText}>
+                +{rest > 0 ? rest : ACHIEVEMENTS.length - earned.length}
+              </Text>
             </View>
+          </View>
+        </Pressable>
 
-            <View style={styles.badgeRow}>
-              {shown.map((achievement) => {
-                const badge = badgeFor(achievement.code);
-                return (
-                  <View
-                    key={achievement.code}
-                    style={[styles.badge, { backgroundColor: badge.color }]}
-                  >
-                    <Feather name={badge.icon} size={22} color={palette.parchmentBright} />
-                  </View>
-                );
-              })}
+        <Pressable
+          onPress={() => router.push('/history')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="clock" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>ИСТОРИЯ ПРОГУЛОК</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-              {/* Пустая пунктирная плитка: сколько ещё ачивок не поместилось
-                  или, пока их нет вовсе, сколько всего можно получить. */}
-              <View style={[styles.badge, styles.badgeMore]}>
-                <Text style={styles.badgeMoreText}>
-                  +{rest > 0 ? rest : ACHIEVEMENTS.length - earned.length}
-                </Text>
-              </View>
-            </View>
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/week')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="bar-chart-2" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>НЕДЕЛЯ С ДРУЗЬЯМИ</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-        <Link href="/history" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="clock" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>ИСТОРИЯ ПРОГУЛОК</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/friends')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="users" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>ДРУЗЬЯ</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-        <Link href="/week" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="bar-chart-2" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>НЕДЕЛЯ С ДРУЗЬЯМИ</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/offline')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="download" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>КАРТА ОФЛАЙН</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-        <Link href="/friends" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="users" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>ДРУЗЬЯ</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/backup')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="save" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>РЕЗЕРВНАЯ КОПИЯ</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-        <Link href="/offline" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="download" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>КАРТА ОФЛАЙН</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/theme')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="droplet" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>ОФОРМЛЕНИЕ</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-        <Link href="/backup" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="save" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>РЕЗЕРВНАЯ КОПИЯ</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/update')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="refresh-cw" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>ОБНОВЛЕНИЕ</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
 
-        <Link href="/theme" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="droplet" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>ОФОРМЛЕНИЕ</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
-
-        <Link href="/update" asChild>
-          <Pressable style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}>
-            <Feather name="refresh-cw" size={18} color={palette.textDark} />
-            <Text style={styles.friendsText}>ОБНОВЛЕНИЕ</Text>
-            <Feather name="chevron-right" size={18} color={palette.textDark} />
-          </Pressable>
-        </Link>
-
-        <Link href="/dev" asChild>
-          <Pressable style={({ pressed }) => [styles.settings, pressed && styles.settingsPressed]}>
-            <Feather name="settings" size={18} color={palette.parchmentBright} />
-            <Text style={styles.settingsText}>НАСТРОЙКИ</Text>
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/dev')}
+          style={({ pressed }) => [styles.settings, pressed && styles.settingsPressed]}
+        >
+          <Feather name="settings" size={18} color={palette.parchmentBright} />
+          <Text style={styles.settingsText}>НАСТРОЙКИ</Text>
+        </Pressable>
 
         <View style={styles.note}>
           <Text style={styles.noteTitle}>Данные хранятся только на устройстве</Text>

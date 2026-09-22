@@ -14,8 +14,9 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { fonts, line, palette, skyBands, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, spacing } from '@/core/theme/tokens';
 import { Droplets } from './Droplets';
+import { SkyGradient } from './SkyGradient';
 import { GrassLine } from './GrassLine';
 
 interface Props {
@@ -38,9 +39,7 @@ export function ScreenHeader({ title, subtitle, topInset, avatar, onClose }: Pro
   return (
     <View style={[styles.root, { paddingTop: topInset + spacing.sm }]}>
       <View style={styles.bands} pointerEvents="none">
-        {skyBands.map((color) => (
-          <View key={color} style={[styles.band, { backgroundColor: color }]} />
-        ))}
+        <SkyGradient />
         {centered && <View style={styles.sun} />}
 
         {/* Линия горизонта из травы — та же, что и на главном экране. */}
@@ -92,7 +91,6 @@ const styles = StyleSheet.create({
   // Полосы делят шапку поровну: так закат заполняет её целиком при любой
   // высоте статус-бара, без подгонки высоты полосы под устройство.
   bands: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'column' },
-  band: { flex: 1, width: '100%' },
   sun: {
     position: 'absolute',
     alignSelf: 'center',

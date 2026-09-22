@@ -56,10 +56,20 @@ export function Avatar({ value, size, name, useInitials = false }: Props) {
 
 const styles = StyleSheet.create({
   circle: {
-    borderWidth: line,
-    borderColor: palette.edgeSoft,
-    backgroundColor: palette.sand,
+    // Белое кольцо потолще: аватар лежит на небе, и бледная граница
+    // на бледном фоне пропадала вместе с самим кругом.
+    borderWidth: 2,
+    borderColor: palette.parchmentBright,
+    backgroundColor: palette.bark,
   },
   center: { alignItems: 'center', justifyContent: 'center' },
-  initials: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
+  initials: {
+    color: palette.parchmentBright,
+    fontFamily: fonts.display,
+    fontWeight: '900',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(5, 54, 79, 0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
 });

@@ -12,7 +12,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
-import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, shadow, spacing } from '@/core/theme/tokens';
 import { useAlwaysSharing } from '@/features/friends';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -71,7 +71,9 @@ export function WalkStatus() {
           </>
         )}
       </View>
-      <Text style={styles.hint}>запись включится сама, когда вы пойдёте</Text>
+      <View style={styles.hintWrap}>
+        <Text style={styles.hint}>запись включится сама, когда вы пойдёте</Text>
+      </View>
     </View>
   );
 }
@@ -89,7 +91,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: line,
     borderColor: palette.edgeSoft,
-    backgroundColor: palette.sand,
+    backgroundColor: palette.parchmentBright,
+    ...shadow,
   },
   active: { backgroundColor: palette.ember },
   denied: { backgroundColor: palette.rust },
@@ -101,22 +104,27 @@ const styles = StyleSheet.create({
     backgroundColor: palette.textOnDark,
   },
   activeText: {
-    color: palette.textOnDark,
+    color: palette.textOnLime,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
     fontVariant: ['tabular-nums'],
   },
-  idleText: { color: palette.textMuted, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
+  idleText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   divider: { width: 1, height: 16, backgroundColor: palette.textMuted, opacity: 0.4 },
   sharingText: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   deniedText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  // Стекло под подсказкой: под ней бывает и светлая земля, и тёмный
+  // туман, и на одном из двух текст пропадал целиком.
+  hintWrap: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    backgroundColor: palette.glass,
+  },
   hint: {
     fontFamily: fonts.body,
-    color: palette.textOnMap,
+    color: palette.textDark,
     fontSize: 12,
-    textShadowColor: palette.mapHalo,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
 });

@@ -124,16 +124,16 @@ export function FogLayer({
             path={geometry.trail}
             style="stroke"
             /* Ширина в метрах Меркатора: тропа всегда занимает ту же долю коридора. */
-            strokeWidth={geometry.revealStrokeMerc * 0.45}
+            strokeWidth={geometry.revealStrokeMerc * 0.24}
             strokeCap="round"
             strokeJoin="round"
             color={palette.ember}
-            opacity={0.55}
+            opacity={0.45}
           />
           <Path
             path={geometry.trail}
             style="stroke"
-            strokeWidth={geometry.revealStrokeMerc * 0.17}
+            strokeWidth={geometry.revealStrokeMerc * 0.085}
             strokeCap="round"
             strokeJoin="round"
             color={palette.trailCore}
