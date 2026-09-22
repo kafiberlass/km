@@ -14,12 +14,10 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { allPlaces, getProfile } from '@/core/db/repo';
-import { formatPercent } from '@/core/geo/coverage';
-import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { fonts, line, palette, pressStyle, spacing, text } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
-import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
+import { useFogGeometry } from '@/features/fog/useFog';
 import { isServerConfigured, useFriends } from '@/features/friends';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 
@@ -30,7 +28,7 @@ import { useQuest } from '@/features/quests/useQuest';
 import { WalkStatus } from '@/features/tracking/WalkStatus';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
 import { DEMO_CENTER } from '@/features/places/seed';
-import { Chip, Toast, XpBar } from '@/ui/widgets';
+import { Toast, XpBar } from '@/ui/widgets';
 import { SunsetHeader } from '@/ui/SunsetHeader';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -45,8 +43,6 @@ const CLOSE_ZOOM = 16;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const [showFriends, setShowFriends] = useState(true);
-  const [showPlaces, setShowPlaces] = useState(true);
   const cameraRef = useRef<CameraRef>(null);
 
   const status = useWalkStore((s) => s.status);
@@ -55,8 +51,6 @@ export default function MapScreen() {
   const streakDays = useWalkStore((s) => s.streakDays);
   const displayName = useWalkStore((s) => s.displayName);
   const avatar = useWalkStore((s) => s.avatar);
-  const exploredCells = useWalkStore((s) => s.exploredCells);
-  const districts = useWalkStore((s) => s.districts);
   const geometryVersion = useWalkStore((s) => s.geometryVersion);
   const placesVersion = useWalkStore((s) => s.placesVersion);
   const liveSegment = useWalkStore((s) => s.liveSegment);
@@ -77,19 +71,14 @@ export default function MapScreen() {
   });
 
   const { geometry } = useFogGeometry(origin, geometryVersion, liveSegment);
-  const coverage = useCoverage(origin, exploredCells);
-  const friends = useFriends(origin, showFriends);
-
-  // Без ключей от сервера друзья ненастоящие. Рисовать выдуманных людей
-  // на карте молча — значит врать: человек принимает их за живых.
-  const serverReady = isServerConfigured();
+  const friends = useFriends(origin, true);
 
   // Цель дня. На карте — одной строкой, полностью она живёт на «Местах».
   const quest = useQuest(origin);
 
   // Читаются из базы заново, когда меняется их список: нашли новые
   // через OSM, открыли очередное на прогулке, восстановили копию.
-  const places = useMemo(() => (showPlaces ? allPlaces() : []), [showPlaces, placesVersion]);
+  const places = useMemo(() => allPlaces(), [placesVersion]);
 
   const tracking = status === 'tracking' || status === 'starting';
 
@@ -125,10 +114,6 @@ export default function MapScreen() {
     });
   }, [knownPoint, origin.lat, origin.lng]);
 
-  // Прогресс квартала, в котором человек стоит прямо сейчас. Это и есть
-  // ответ на «сколько осталось» — в отличие от процента по всему району.
-  const hereId = districtAt(myPoint);
-  const here = progressOf(districts.get(hereId) ?? 0, hereId);
 
   const centerOnMe = useCallback(async () => {
     // Спрашиваем свежую точку: последняя известная может быть вчерашней
@@ -169,70 +154,11 @@ export default function MapScreen() {
           geometry={geometry}
           myPoint={myPoint}
           tracking={tracking}
-          friends={showFriends ? friends : []}
+          friends={friends}
           places={places}
+          myAvatar={avatar}
+          myName={displayName}
         >
-          <View style={styles.overlayTop} pointerEvents="box-none">
-            <View style={styles.topLeft} pointerEvents="box-none">
-              <Chip
-                label={`ОТКРЫТО ${formatPercent(coverage.ratio)}`}
-                icon={<Feather name="map" size={16} color={palette.textDark} />}
-              />
-              <Chip
-                label={
-                  here.done
-                    ? 'КВАРТАЛ ЗАКРЫТ'
-                    : `КВАРТАЛ ${Math.round(here.ratio * 100)}%`
-                }
-                icon={
-                  <Feather
-                    name={here.done ? 'check-circle' : 'grid'}
-                    size={16}
-                    color={here.done ? palette.teal : palette.textDark}
-                  />
-                }
-              />
-            </View>
-
-            <View style={styles.topRight} pointerEvents="box-none">
-              <Pressable onPress={() => setShowPlaces((value) => !value)}>
-                <Chip
-                  label={showPlaces ? `МЕСТА ${places.length}` : 'МЕСТА ВЫКЛ'}
-                  icon={
-                    <Feather
-                      name="map-pin"
-                      size={16}
-                      color={showPlaces ? palette.textDark : palette.textMuted}
-                    />
-                  }
-                  style={showPlaces ? undefined : styles.chipOff}
-                />
-              </Pressable>
-
-              <Pressable onPress={() => setShowFriends((value) => !value)}>
-                <Chip
-                  label={
-                    showFriends
-                      ? `ДРУЗЬЯ ${friends.length}${serverReady ? '' : ' · ДЕМО'}`
-                      : 'ДРУЗЬЯ ВЫКЛ'
-                  }
-                  icon={
-                    <Feather
-                      name="users"
-                      size={16}
-                      color={showFriends ? palette.textDark : palette.textMuted}
-                    />
-                  }
-                  style={showFriends ? undefined : styles.chipOff}
-                />
-              </Pressable>
-
-              <Pressable onPress={() => router.push('/dev')} hitSlop={spacing.sm}>
-                <Text style={styles.devLink}>DEV</Text>
-              </Pressable>
-            </View>
-          </View>
-
           <Pressable
             onPress={() => router.push('/map-full')}
             hitSlop={spacing.sm}
@@ -286,28 +212,6 @@ const styles = StyleSheet.create({
     borderWidth: line,
     borderColor: palette.edgeSoft,
     overflow: 'hidden',
-  },
-  overlayTop: {
-    position: 'absolute',
-    top: spacing.md,
-    left: spacing.md,
-    right: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  topLeft: { gap: spacing.sm, alignItems: 'flex-start' },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  chipOff: { backgroundColor: palette.sand },
-  devLink: {
-    color: palette.textOnMap,
-    textShadowColor: palette.mapHalo,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-    fontFamily: fonts.display,
-    fontWeight: '900',
-    letterSpacing: 1,
-    padding: spacing.sm,
   },
   // Над нижней панелью, у правого края: большой палец дотягивается,
   // а строку состояния не перекрывает.

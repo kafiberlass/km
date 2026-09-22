@@ -30,10 +30,10 @@ import type { SharedCamera } from '@/features/fog/FogLayer';
 import { isFresh, type Friend } from '@/features/friends/types';
 import { spreadMarkers } from '@/features/globe/projection';
 import { Avatar } from '@/features/profile/Avatar';
+import { initialsOf } from '@/features/profile/avatars';
 
 const AVATAR = 40;
-const HALO = 34;
-const DOT = 18;
+const HALO = 58;
 
 /**
  * Ближе этого метки считаются слипшимися и расходятся.
@@ -43,6 +43,9 @@ const DOT = 18;
  */
 const MARKER_GAP = 46;
 
+/** Своё лицо чуть крупнее чужих: это точка отсчёта на экране. */
+const SELF_AVATAR = 44;
+
 interface Person {
   key: string;
   point: LngLat;
@@ -51,7 +54,7 @@ interface Person {
   color: string;
   initials: string;
   name: string;
-  /** Аватарка друга, если он её выбрал. Своя метка — точка, ей не нужна. */
+  /** Аватарка: своя из профиля, чужая — та, что друг себе выбрал. */
   avatar: string | null;
 }
 
@@ -64,9 +67,22 @@ interface Props {
   height: number;
   /** Своя метка ярче, пока идёт запись прогулки. */
   tracking: boolean;
+  /** Своя аватарка и имя — чтобы на карте было лицо, а не точка. */
+  myAvatar?: string | null;
+  myName?: string | null;
 }
 
-export function PeopleLayer({ me, friends, origin, camera, width, height, tracking }: Props) {
+export function PeopleLayer({
+  me,
+  friends,
+  origin,
+  camera,
+  width,
+  height,
+  tracking,
+  myAvatar = null,
+  myName = null,
+}: Props) {
   const originMerc = useMemo(() => lngLatToMercator(origin), [origin.lat, origin.lng]);
 
   const people = useMemo<Person[]>(() => {
@@ -77,9 +93,9 @@ export function PeopleLayer({ me, friends, origin, camera, width, height, tracki
         self: true,
         live: true,
         color: palette.ember,
-        initials: '',
-        name: '',
-        avatar: null,
+        initials: initialsOf(myName ?? ''),
+        name: myName ?? '',
+        avatar: myAvatar,
       },
     ];
 
@@ -98,7 +114,7 @@ export function PeopleLayer({ me, friends, origin, camera, width, height, tracki
     }
 
     return list;
-  }, [me.lat, me.lng, friends]);
+  }, [me.lat, me.lng, friends, myAvatar, myName]);
 
   const layout = useDerivedValue(() => {
     const matrix = cameraMatrixWorklet(
@@ -177,8 +193,13 @@ function PersonMarker({
   if (person.self) {
     return (
       <Animated.View style={[styles.selfMarker, style]}>
+        {/* Ореол под лицом: по нему свою метку видно даже тогда,
+            когда лицо ещё слишком мелкое, чтобы его разглядеть. */}
         <View style={[styles.halo, tracking && styles.haloActive]} />
-        <View style={styles.dot} />
+
+        <View style={[styles.photoRing, styles.selfRing, { borderColor: palette.ember }]}>
+          <Avatar value={person.avatar} size={SELF_AVATAR - 6} name={person.name || 'Я'} />
+        </View>
       </Animated.View>
     );
   }
@@ -230,13 +251,13 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   haloActive: { backgroundColor: palette.ember, opacity: 0.5 },
-  dot: {
-    width: DOT,
-    height: DOT,
-    borderRadius: DOT / 2,
-    borderWidth: 2,
-    borderColor: palette.parchmentBright,
-    backgroundColor: palette.ember,
+  // Своё лицо: кольцо цвета тропы, чтобы метка читалась как «я»,
+  // а не как ещё один друг.
+  selfRing: {
+    width: SELF_AVATAR,
+    height: SELF_AVATAR,
+    borderRadius: SELF_AVATAR / 2,
+    borderWidth: 3,
   },
 
   avatarWrap: { width: AVATAR, height: AVATAR },

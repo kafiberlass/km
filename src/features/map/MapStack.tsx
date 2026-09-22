@@ -67,6 +67,9 @@ interface Props {
   geometry: FogGeometry | null;
   /** Где человек сейчас — метка «я» и точка на планете. */
   myPoint: LngLat;
+  /** Своя аватарка и имя: на карте у метки должно быть лицо. */
+  myAvatar?: string | null;
+  myName?: string | null;
   tracking: boolean;
   /** Пустой массив = друзья скрыты. */
   friends: readonly Friend[];
@@ -90,6 +93,8 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
     origin,
     geometry,
     myPoint,
+    myAvatar,
+    myName,
     tracking,
     friends,
     places = [],
@@ -211,6 +216,8 @@ export const MapStack = forwardRef<CameraRef, Props>(function MapStack(
           width={size.width}
           height={size.height}
           tracking={tracking}
+          myAvatar={myAvatar}
+          myName={myName}
         />
       )}
 
