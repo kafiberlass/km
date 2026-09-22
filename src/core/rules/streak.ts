@@ -106,3 +106,48 @@ export function isStreakAtRisk(state: StreakState, today: LocalDateKey): boolean
   if (!state.lastActiveDate || state.streakDays === 0) return false;
   return daysBetween(state.lastActiveDate, today) === 1;
 }
+
+/**
+ * Серия прямо по истории прогулок.
+ *
+ * Прежде число жило отдельным счётчиком в профиле и росло только в тот
+ * момент, когда прогулка закрывалась. Если прогулка не закрылась (телефон
+ * выключили, приложение выгрузили), день терялся, а следующая прогулка
+ * видела разрыв в два дня и начинала серию заново — отсюда вечная
+ * единица на огоньке.
+ *
+ * Здесь считается от самих прогулок: они записаны в базу, и соврать
+ * им нечем. Счётчик в профиле остаётся — по нему начисляется опыт
+ * за первую прогулку дня, — но показываем мы это.
+ */
+export function streakFromDays(
+  days: readonly LocalDateKey[],
+  today: LocalDateKey,
+): number {
+  const unique = [...new Set(days)].sort().reverse();
+  if (unique.length === 0) return 0;
+
+  // Серия жива, если последняя прогулка сегодня или вчера. Разрыв
+  // больше суток — серия оборвалась.
+  const fresh = daysBetween(unique[0]!, today);
+  if (fresh > 1) return 0;
+
+  let streak = 1;
+  for (let i = 1; i < unique.length; i += 1) {
+    if (daysBetween(unique[i]!, unique[i - 1]!) !== 1) break;
+    streak += 1;
+  }
+
+  return streak;
+}
+
+/** «1 день», «2 дня», «5 дней» — русский счёт, а не «1 дней». */
+export function daysWord(count: number): string {
+  const mod100 = Math.abs(count) % 100;
+  const mod10 = mod100 % 10;
+
+  if (mod100 >= 11 && mod100 <= 14) return 'дней';
+  if (mod10 === 1) return 'день';
+  if (mod10 >= 2 && mod10 <= 4) return 'дня';
+  return 'дней';
+}

@@ -5,6 +5,7 @@
  */
 
 import { getRawDb } from './client';
+import { deviceTimeZone, localDateKey, streakFromDays } from '@/core/rules/streak';
 import { PARENT_RES, parentOf, type Cell } from '../geo/coverage';
 import type { GeoPoint } from '../geo/filter';
 import { completedCount, countByDistrict } from '../geo/districts';
@@ -454,6 +455,17 @@ export function discoverPlace(placeId: string, at: number, sessionId: string | n
 }
 
 /** Снимок для правил ачивок. Один запрос на агрегат — вызывается редко. */
+/** Дни, в которые была хоть одна прогулка, по местным суткам. */
+function walkDayKeys(timeZone: string): string[] {
+  const zone = timeZone === 'UTC' ? deviceTimeZone() : timeZone;
+  return listWalks().map((walk) => localDateKey(walk.startedAt, zone));
+}
+
+function todayKey(timeZone: string): string {
+  const zone = timeZone === 'UTC' ? deviceTimeZone() : timeZone;
+  return localDateKey(Date.now(), zone);
+}
+
 export function buildSnapshot(homeRegionTotalCells: number): ProgressSnapshot {
   const db = getRawDb();
   const stats = row<Record<string, unknown>>(
@@ -491,8 +503,12 @@ export function buildSnapshot(homeRegionTotalCells: number): ProgressSnapshot {
     totalWalks: Number(stats?.total_walks ?? 0),
     exploredCells: cells,
     discoveredPlaces: Number(placesFound?.n ?? 0),
-    currentStreakDays: profile.streakDays,
-    bestStreakDays: profile.bestStreak,
+    // Серия — по дням самих прогулок, а не по счётчику в профиле:
+    // счётчик рос только в момент закрытия прогулки и терял дни, когда
+    // приложение выгружали на ходу. Ачивки за серию должны считать
+    // то же, что человек видит на огоньке.
+    currentStreakDays: streakFromDays(walkDayKeys(profile.timeZone), todayKey(profile.timeZone)),
+    bestStreakDays: Math.max(profile.bestStreak, streakFromDays(walkDayKeys(profile.timeZone), todayKey(profile.timeZone))),
     nightWalks: Number(stats?.night_walks ?? 0),
     longestWalkM: Number(stats?.longest ?? 0),
     homeRegionRatio: homeRegionTotalCells > 0 ? cells / homeRegionTotalCells : 0,

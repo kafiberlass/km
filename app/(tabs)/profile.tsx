@@ -8,7 +8,7 @@ import { resetDatabase } from '@/core/db/client';
 import { buildSnapshot, countCells, getProfile, unlockedAchievements } from '@/core/db/repo';
 import { ACHIEVEMENTS } from '@/core/rules/achievements';
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
-import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
+import { daysWord, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { Avatar } from '@/features/profile/Avatar';
 import { fonts, line, palette, pressStyle, radii, spacing, text } from '@/core/theme/tokens';
@@ -42,14 +42,9 @@ export default function ProfileScreen() {
   );
 
   const timeZone = profile.timeZone === 'UTC' ? deviceTimeZone() : profile.timeZone;
-  const streak = currentStreak(
-    {
-      streakDays: profile.streakDays,
-      lastActiveDate: profile.lastActiveDate,
-      bestStreak: profile.bestStreak,
-    },
-    localDateKey(Date.now(), timeZone),
-  );
+
+  // То же число, что на огоньке в шапке карты: оба считаются из прогулок.
+  const streak = useWalkStore((s) => s.streakDays);
 
   // Порядок ачивок в списке правил заодно задаёт порядок плиток: свежие
   // окажутся в конце, поэтому показываем последние полученные.
@@ -61,7 +56,7 @@ export default function ProfileScreen() {
     <View style={styles.root}>
       <ScreenHeader
         title={displayName ?? levelTitle(level)}
-        subtitle={`${levelTitle(level)} · уровень ${level} · ${streak} дней подряд`}
+        subtitle={`${levelTitle(level)} · уровень ${level} · ${streak} ${daysWord(streak)} подряд`}
         topInset={insets.top}
         avatar={
           <Pressable
@@ -91,7 +86,7 @@ export default function ProfileScreen() {
             color={palette.gold}
           />
           <Tile value={String(districtsDone)} label="кварталов" color={palette.teal} />
-          <Tile value={String(streak)} label="дней подряд" color={palette.emberDeep} />
+          <Tile value={String(streak)} label={`${daysWord(streak)} подряд`} color={palette.emberDeep} />
         </View>
 
         {/* Нажимается вся карточка, а не только ссылка «ВСЕ»: человек

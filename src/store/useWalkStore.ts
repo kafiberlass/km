@@ -53,7 +53,12 @@ import {
   type AutoWalkState,
 } from '@/features/tracking/autoWalk';
 import { evaluate, type AchievementDef } from '@/core/rules/achievements';
-import { deviceTimeZone, localDateKey, registerActivity } from '@/core/rules/streak';
+import {
+  deviceTimeZone,
+  localDateKey,
+  registerActivity,
+  streakFromDays,
+} from '@/core/rules/streak';
 import {
   XP_RATES,
   applyXp,
@@ -229,6 +234,10 @@ export const useWalkStore = create<WalkState>((set, get) => ({
       districts,
       districtsDone: completedCount(districts),
     });
+
+    // Серия считается из самих прогулок: счётчик в профиле врал,
+    // если прогулка не успевала закрыться.
+    set({ streakDays: liveStreak() });
 
     catchUpAchievements(set, get);
 
@@ -830,9 +839,23 @@ function awardSessionXp(
   set({
     level: next.level,
     xp: next.xp,
-    streakDays: streak.state.streakDays,
+    streakDays: liveStreak(),
     toast: buildToast(newlyUnlocked, next.levelUps) ?? get().toast,
   });
+}
+
+/**
+ * Сколько дней подряд человек выходил — по записанным прогулкам.
+ *
+ * Читает историю целиком, поэтому зовётся только в двух местах: при
+ * загрузке и по окончании прогулки. Чаще незачем — чаще она и не меняется.
+ */
+function liveStreak(): number {
+  const profile = repo.getProfile();
+  const timeZone = profile.timeZone === 'UTC' ? deviceTimeZone() : profile.timeZone;
+
+  const days = repo.listWalks().map((walk) => localDateKey(walk.startedAt, timeZone));
+  return streakFromDays(days, localDateKey(Date.now(), timeZone));
 }
 
 /**
