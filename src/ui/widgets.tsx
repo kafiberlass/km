@@ -8,6 +8,7 @@
 
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Animated, {
   FadeInDown,
   FadeOutDown,
@@ -83,14 +84,15 @@ export function Toast({
   return (
     <Animated.View entering={FadeInDown} exiting={FadeOutDown} style={styles.toast}>
       <View style={styles.toastIcon}>
-        <Text style={styles.toastIconText}>🏆</Text>
+        <Gloss radius={radii.sm} />
+        <Feather name="award" size={22} color={palette.textOnLime} />
       </View>
       <View style={styles.toastBody}>
         <Text style={styles.toastTitle}>{title}</Text>
         <Text style={styles.toastSubtitle}>{subtitle}</Text>
       </View>
       <Pressable onPress={onDismiss} hitSlop={12} style={styles.toastClose}>
-        <Text style={styles.toastCloseText}>✕</Text>
+        <Feather name="x" size={18} color={palette.textDark} />
       </Pressable>
     </Animated.View>
   );
@@ -211,12 +213,12 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: radii.sm,
     borderWidth: line,
-    borderColor: palette.edgeSoft,
+    borderColor: palette.edge,
     backgroundColor: palette.gold,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toastIconText: { fontSize: 20 },
   toastBody: { flex: 1 },
   toastTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
   toastSubtitle: { color: palette.textMuted, marginTop: 2, fontVariant: ['tabular-nums'] },
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toastCloseText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900' },
+  toastCloseText: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', fontSize: 16 },
 
   button: {
     paddingHorizontal: spacing.xl,
@@ -247,7 +249,13 @@ const styles = StyleSheet.create({
   // Стекло при этом остаётся на месте — оно не ездит.
   buttonPressed: { shadowOpacity: 0.08, elevation: 1 },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
+  buttonText: {
+    // Тёмно-зелёный, как в макете: белым по лайму не прочитать.
+    color: palette.textOnLime,
+    fontFamily: fonts.display,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
   buttonTextGhost: { color: palette.textDark },
 
   stat: {

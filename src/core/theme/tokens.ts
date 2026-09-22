@@ -70,6 +70,17 @@ const aquaPalette = {
   /** Текст на тумане. */
   textOnDark: '#DCF3FF',
   textOnFog: '#A9D8EE',
+  /**
+   * Текст на лаймовой кнопке. В макете он тёмно-зелёный, а не белый:
+   * белым по лайму не прочитать — контраст около двух к одному.
+   */
+  textOnLime: '#1E3D05',
+  /**
+   * Подписи прямо поверх карты — не на стекле. Карта здесь светлая,
+   * поэтому текст тёмный, а читаемость держит светлый ореол.
+   */
+  textOnMap: '#05364F',
+  mapHalo: 'rgba(255, 255, 255, 0.9)',
 
   /** Стекло: белый от 95% сверху до 66% снизу. */
   edge: 'rgba(255, 255, 255, 0.95)',
@@ -179,6 +190,11 @@ const duskPalette = {
   textOnDark: '#F5EDDC',
   textOnFog: '#D9C4A0',
   trailCore: '#F2C94C',
+  textOnLime: '#F5EDDC',
+  // В сумерках карта тёмная, и всё переворачивается: светлый текст,
+  // тёмный ореол.
+  textOnMap: '#F5EDDC',
+  mapHalo: 'rgba(36, 24, 18, 0.9)',
 
   // В сумерках границу держит контур, а не блик: стекла здесь нет.
   edge: '#241812',
@@ -230,6 +246,17 @@ export const palette = (isDusk ? duskPalette : aquaPalette) as typeof aquaPalett
 export const skyBands = isDusk ? duskBands : aquaBands;
 export const shadow = isDusk ? duskShadow : aquaShadow;
 export const fonts = (isDusk ? duskFonts : aquaFonts) as typeof aquaFonts;
+
+/**
+ * Как выглядит нажатие.
+ *
+ * В акве — по макету: «нажатие = инверсия, блик уходит вниз, тень уезжает
+ * внутрь; сдвиг по Y не нужен». Стекло не ездит, оно переворачивает свет.
+ * В сумерках наоборот: там кнопка бумажная и вдавливается.
+ */
+export const pressStyle = isDusk
+  ? ({ transform: [{ translateY: 2 }] } as const)
+  : ({ opacity: 0.85 } as const);
 
 /**
  * Толщина контура.

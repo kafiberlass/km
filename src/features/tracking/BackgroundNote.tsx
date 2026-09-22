@@ -43,6 +43,13 @@ export function BackgroundNote() {
 
 const styles = StyleSheet.create({
   ok: {
-    fontFamily: fonts.body, color: palette.parchment, fontSize: 12, textAlign: 'center', opacity: 0.8 },
+    fontFamily: fonts.body,
+    color: palette.textOnMap,
+    fontSize: 12,
+    textAlign: 'center',
+    textShadowColor: palette.mapHalo,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
   warn: { color: palette.gold, fontSize: 12, textAlign: 'center', fontFamily: fonts.display, fontWeight: '700' },
 });

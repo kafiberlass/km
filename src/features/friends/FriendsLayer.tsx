@@ -152,8 +152,8 @@ const styles = StyleSheet.create({
     color: palette.parchmentBright,
     fontSize: 10,
     letterSpacing: 0.3,
-    textShadowColor: palette.ink,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: palette.mapHalo,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
 });

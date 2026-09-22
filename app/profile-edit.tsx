@@ -21,7 +21,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getProfile } from '@/core/db/repo';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
 import { DEMO_CENTER } from '@/features/places/seed';
 import { Avatar } from '@/features/profile/Avatar';
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   // Выбранный значок обведён светлым кольцом: рамка есть у всех,
   // отличать надо чем-то другим.
   tileChosen: { borderColor: palette.parchmentBright, borderWidth: 5 },
-  tilePressed: { transform: [{ translateY: 2 }] },
+  tilePressed: { ...pressStyle },
   ok: { color: palette.teal, fontFamily: fonts.display, fontWeight: '700' },
   error: { color: palette.rust, fontFamily: fonts.display, fontWeight: '700' },
 });

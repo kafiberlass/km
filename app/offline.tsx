@@ -204,14 +204,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radiusChosen: { backgroundColor: palette.ember },
-  radiusPressed: { transform: [{ translateY: 2 }] },
+  radiusPressed: { opacity: 0.85 },
   radiusValue: {
     color: palette.textDark,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
   },
-  radiusValueChosen: { color: palette.textOnDark },
+  radiusValueChosen: { color: palette.textOnLime },
 
   track: {
     height: 18,

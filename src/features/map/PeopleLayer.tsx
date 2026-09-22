@@ -263,13 +263,13 @@ const styles = StyleSheet.create({
   avatarText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', fontSize: 13 },
   name: {
     marginTop: 2,
-    color: palette.parchmentBright,
+    color: palette.textOnMap,
     fontSize: 11,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 0.5,
-    textShadowColor: palette.ink,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: palette.mapHalo,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
 });

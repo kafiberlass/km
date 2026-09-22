@@ -35,7 +35,7 @@ import {
 } from '@/features/friends';
 import { Avatar } from '@/features/profile/Avatar';
 import { useMyPosition } from '@/features/tracking/useMyPosition';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
 
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removePressed: { transform: [{ translateY: 2 }] },
+  removePressed: { ...pressStyle },
 
   visits: { gap: spacing.sm, borderTopWidth: 2, borderTopColor: '#00000018', paddingTop: spacing.sm },
   visit: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

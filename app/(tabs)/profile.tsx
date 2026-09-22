@@ -11,7 +11,7 @@ import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { currentStreak, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
 import { Avatar } from '@/features/profile/Avatar';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.parchmentBright,
     gap: spacing.md,
   },
-  cardPressed: { opacity: 0.85, transform: [{ translateY: 2 }] },
+  cardPressed: { ...pressStyle },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { color: palette.textDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
   cardLink: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     borderColor: palette.edgeSoft,
     backgroundColor: palette.bark,
   },
-  settingsPressed: { transform: [{ translateY: 2 }] },
+  settingsPressed: { ...pressStyle },
   settingsText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1 },
 
   note: {

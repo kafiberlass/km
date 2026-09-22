@@ -17,7 +17,7 @@ import { allPlaces, getProfile } from '@/core/db/repo';
 import { formatPercent } from '@/core/geo/coverage';
 import { districtAt, progressOf } from '@/core/geo/districts';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
-import { fonts, line, palette, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, spacing } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { useCoverage, useFogGeometry } from '@/features/fog/useFog';
 import { isServerConfigured, useFriends } from '@/features/friends';
@@ -300,7 +300,10 @@ const styles = StyleSheet.create({
   topRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   chipOff: { backgroundColor: palette.sand },
   devLink: {
-    color: palette.parchment,
+    color: palette.textOnMap,
+    textShadowColor: palette.mapHalo,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
     fontFamily: fonts.display,
     fontWeight: '900',
     letterSpacing: 1,
@@ -338,7 +341,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  locatePressed: { transform: [{ translateY: 2 }] },
+  locatePressed: { ...pressStyle },
   overlayBottom: {
     position: 'absolute',
     left: spacing.md,

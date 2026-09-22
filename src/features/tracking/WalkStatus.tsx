@@ -12,7 +12,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
-import { fonts, line, palette, radii, spacing } from '@/core/theme/tokens';
+import { fonts, line, palette, pressStyle, radii, spacing } from '@/core/theme/tokens';
 import { useAlwaysSharing } from '@/features/friends';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   active: { backgroundColor: palette.ember },
   denied: { backgroundColor: palette.rust },
-  pressed: { transform: [{ translateY: 2 }] },
+  pressed: { ...pressStyle },
   dot: {
     width: 10,
     height: 10,
@@ -112,5 +112,11 @@ const styles = StyleSheet.create({
   sharingText: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   deniedText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   hint: {
-    fontFamily: fonts.body, color: palette.parchment, fontSize: 12, opacity: 0.8 },
+    fontFamily: fonts.body,
+    color: palette.textOnMap,
+    fontSize: 12,
+    textShadowColor: palette.mapHalo,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
 });
