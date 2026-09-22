@@ -134,6 +134,14 @@ export class MockFriendsProvider implements FriendsProvider {
     return Promise.resolve();
   }
 
+  uploadBackup(): Promise<void> {
+    return Promise.reject(new Error('Сервер не настроен: копию класть некуда'));
+  }
+
+  downloadBackup(): Promise<string | null> {
+    return Promise.resolve(null);
+  }
+
   setDisplayName(): Promise<void> {
     return Promise.resolve();
   }

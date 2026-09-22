@@ -25,9 +25,12 @@ import { getValue, setValue } from '@/core/db/kv';
 import { avatarFileName, planAvatarSync } from './avatarSync';
 import { friendIdsFrom, type FriendshipRow } from './links';
 
+/** Закрытый бакет: в копии вся история прогулок, и читать её может только хозяин. */
+const BACKUP_BUCKET = 'backups';
+
 const UPLOADED_AVATAR_KEY = 'avatar-uploaded';
 import { sqliteSessionStorage } from './sessionStorage';
-import type { Friend, FriendsProvider, FriendVisit } from './types';
+import type { Friend, FriendsProvider, FriendVisit, RemoteBackup } from './types';
 
 /** Цвет метки. Сервер цветов не хранит — считаем из id, чтобы у друга
  *  он был одинаковым на всех устройствах и не прыгал между запусками. */
@@ -365,6 +368,69 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     // нельзя. Частая причина — не выполненный docs/supabase/6-week.sql,
     // где чинится список допустимых видов места.
     if (error) console.warn('[friends] визит не отправился', error.message);
+  }
+
+  /**
+   * Положить копию на сервер.
+   *
+   * Один файл на человека, с перезаписью: хранить историю версий незачем,
+   * а бесплатный тариф не резиновый. Имя — идентификатор пользователя,
+   * по нему же работают политики доступа.
+   */
+  async uploadBackup(json: string): Promise<void> {
+    const userId = await this.ensureSession();
+    if (!userId) throw new Error('Нет связи с сервером');
+
+    const { error } = await this.client.storage
+      .from(BACKUP_BUCKET)
+      .upload(`${userId}.json`, json, {
+        contentType: 'application/json',
+        upsert: true,
+      });
+
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Забрать копию с сервера.
+   *
+   * Через подписанную ссылку, а не через download(): тот отдаёт Blob,
+   * а в React Native у Blob нет метода text() — читать его нечем.
+   */
+  async downloadBackup(): Promise<string | null> {
+    const userId = await this.ensureSession();
+    if (!userId) throw new Error('Нет связи с сервером');
+
+    const { data, error } = await this.client.storage
+      .from(BACKUP_BUCKET)
+      .createSignedUrl(`${userId}.json`, 60);
+
+    if (error || !data?.signedUrl) return null;
+
+    const response = await fetch(data.signedUrl);
+    if (!response.ok) throw new Error(`Сервер ответил ${response.status}`);
+
+    return await response.text();
+  }
+
+  /** Есть ли копия на сервере и какая. */
+  async backupInfo(): Promise<RemoteBackup | null> {
+    const userId = await this.ensureSession();
+    if (!userId) return null;
+
+    const { data, error } = await this.client.storage
+      .from(BACKUP_BUCKET)
+      .list('', { search: `${userId}.json` });
+
+    if (error || !data || data.length === 0) return null;
+
+    const file = data[0]!;
+    const meta = file.metadata as { size?: number } | null;
+
+    return {
+      updatedAt: Date.parse(file.updated_at ?? file.created_at ?? '') || 0,
+      sizeBytes: Number(meta?.size ?? 0),
+    };
   }
 
   /** Код, который диктуют другу. */

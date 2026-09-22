@@ -80,6 +80,16 @@ export interface FriendsProvider {
    * которым человек к нему шёл.
    */
   publishVisit?(visit: Omit<FriendVisit, 'id'>): Promise<void>;
+  /**
+   * Резервная копия на сервере.
+   *
+   * Живёт рядом с друзьями не по смыслу, а по устройству: это
+   * единственное место в приложении, где есть сессия и ключи сервера.
+   * Разводить два клиента ради красоты — две сессии и две точки отказа.
+   */
+  uploadBackup?(json: string): Promise<void>;
+  downloadBackup?(): Promise<string | null>;
+  backupInfo?(): Promise<RemoteBackup | null>;
   /** Код, который диктуют другу. */
   inviteCode?(): Promise<string | null>;
   /** Связаться с другом по его коду. Бросает понятную ошибку. */
@@ -90,6 +100,12 @@ export interface FriendsProvider {
   setDisplayName?(name: string): Promise<void>;
   /** Аватарка, которую видят друзья. Фотография сначала загружается. */
   setAvatar?(value: string | null): Promise<string | null>;
+}
+
+/** Что лежит на сервере: когда сохранено и сколько весит. */
+export interface RemoteBackup {
+  updatedAt: number;
+  sizeBytes: number;
 }
 
 /** Считается ли позиция актуальной. Старую метку показываем приглушённой. */

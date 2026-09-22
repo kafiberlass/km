@@ -9,7 +9,7 @@
  * сам решает, где лежит его история.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -21,9 +21,18 @@ import { backupFileName, parseBackup, summarize } from '@/core/backup/format';
 import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton, Stat } from '@/ui/widgets';
+import { createFriendsProvider, isServerConfigured } from '@/features/friends';
+import type { RemoteBackup } from '@/features/friends/types';
 import { useWalkStore } from '@/store/useWalkStore';
 
 const FOLDER = 'backups';
+
+/** «2,4 МБ» — чтобы было видно, что копия не пустая. */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
 
 function formatDate(timestamp: number): string {
   try {
@@ -44,6 +53,97 @@ export default function BackupScreen() {
 
   // Что вообще есть в телефоне — чтобы человек видел, что именно сохраняет.
   const [snapshot] = useState(() => summarize(collectBackup()));
+
+  const serverReady = isServerConfigured();
+  const [remote, setRemote] = useState<RemoteBackup | null>(null);
+
+  // Что лежит на сервере, спрашиваем один раз при открытии экрана.
+  useEffect(() => {
+    if (!serverReady) return;
+
+    let cancelled = false;
+    void (async () => {
+      const provider = createFriendsProvider({ lat: 0, lng: 0 });
+      const info = await provider.backupInfo?.().catch(() => null);
+      if (!cancelled) setRemote(info ?? null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [serverReady]);
+
+  const saveRemote = useCallback(async () => {
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const provider = createFriendsProvider({ lat: 0, lng: 0 });
+      if (!provider.uploadBackup) throw new Error('Сервер не настроен');
+
+      await provider.uploadBackup(JSON.stringify(collectBackup()));
+      setRemote((await provider.backupInfo?.()) ?? null);
+      setMessage({ text: 'Копия сохранена на сервере', ok: true });
+    } catch (error) {
+      console.warn('[backup] не удалось отправить копию', error);
+      setMessage({ text: 'Не получилось сохранить копию на сервер', ok: false });
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const restoreRemote = useCallback(async () => {
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const provider = createFriendsProvider({ lat: 0, lng: 0 });
+      const raw = await provider.downloadBackup?.();
+      if (!raw) {
+        setMessage({ text: 'На сервере копии нет', ok: false });
+        setBusy(false);
+        return;
+      }
+
+      const parsed = parseBackup(raw);
+      if (parsed.status !== 'ok') {
+        setMessage({ text: 'Копия на сервере не читается', ok: false });
+        setBusy(false);
+        return;
+      }
+
+      const info = summarize(parsed.data);
+
+      // Замена необратима — переспрашиваем, как и для копии из файла.
+      Alert.alert(
+        'Заменить всё копией с сервера?',
+        `Копия от ${formatDate(info.createdAt)}: ${info.walks} прогулок, ${info.cells} клеток, уровень ${info.level}.\n\nВсё, что сейчас в телефоне, будет заменено.`,
+        [
+          { text: 'Отмена', style: 'cancel', onPress: () => setBusy(false) },
+          {
+            text: 'Заменить',
+            style: 'destructive',
+            onPress: () => {
+              try {
+                restoreBackup(parsed.data);
+                hydrate();
+                setMessage({ text: 'Готово: история восстановлена', ok: true });
+              } catch (error) {
+                console.warn('[backup] не удалось восстановить', error);
+                setMessage({ text: 'Не получилось восстановить копию', ok: false });
+              } finally {
+                setBusy(false);
+              }
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      console.warn('[backup] не удалось забрать копию', error);
+      setMessage({ text: 'Не получилось забрать копию с сервера', ok: false });
+      setBusy(false);
+    }
+  }, [hydrate]);
 
   const save = useCallback(async () => {
     setBusy(true);
@@ -170,6 +270,38 @@ export default function BackupScreen() {
             onPress={() => void restore()}
             disabled={busy}
           />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>КОПИЯ НА СЕРВЕРЕ</Text>
+          <Text style={styles.body}>
+            {remote == null
+              ? 'На сервере копии пока нет.'
+              : `Последняя копия: ${formatDate(remote.updatedAt)} · ${formatSize(remote.sizeBytes)}`}
+          </Text>
+          <Text style={styles.body}>
+            Копия лежит в закрытом хранилище: читать её можете только вы, даже друзья
+            не видят. Но это значит, что история прогулок уходит с телефона, — в файле
+            она никуда не уходит, и в этом разница между двумя способами.
+          </Text>
+
+          <ActionButton
+            label="СОХРАНИТЬ НА СЕРВЕР"
+            onPress={() => void saveRemote()}
+            disabled={busy || !serverReady}
+          />
+          <ActionButton
+            label="ВОССТАНОВИТЬ С СЕРВЕРА"
+            tone="ghost"
+            onPress={() => void restoreRemote()}
+            disabled={busy || !serverReady || remote == null}
+          />
+
+          {!serverReady && (
+            <Text style={styles.body}>
+              Сервер не настроен: приложение собрано без ключей, и класть копию некуда.
+            </Text>
+          )}
         </View>
 
         {busy && <ActivityIndicator color={palette.ember} />}
