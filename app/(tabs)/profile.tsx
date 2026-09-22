@@ -10,6 +10,7 @@ import { ACHIEVEMENTS } from '@/core/rules/achievements';
 import { formatSteps, stepsFromMeters } from '@/core/rules/steps';
 import { daysWord, deviceTimeZone, localDateKey } from '@/core/rules/streak';
 import { levelTitle, levelXpRequirement } from '@/core/rules/xp';
+import { isServerConfigured } from '@/features/friends';
 import { Avatar } from '@/features/profile/Avatar';
 import { fonts, line, palette, pressStyle, radii, spacing, text } from '@/core/theme/tokens';
 import { badgeFor } from '@/ui/badges';
@@ -32,6 +33,7 @@ export default function ProfileScreen() {
   const displayName = useWalkStore((s) => s.displayName);
   const avatar = useWalkStore((s) => s.avatar);
 
+  const serverReady = isServerConfigured();
   const profile = getProfile();
   const { snapshot, unlocked } = useMemo(
     () => ({
@@ -195,12 +197,25 @@ export default function ProfileScreen() {
           <Text style={styles.settingsText}>НАСТРОЙКИ</Text>
         </Pressable>
 
+        {/* Текст переписан: он был написан до того, как появились
+            друзья и резервная копия, и с тех пор обещал не то. */}
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>Данные хранятся только на устройстве</Text>
+          <Text style={styles.noteTitle}>Что остаётся на телефоне</Text>
           <Text style={styles.noteBody}>
-            Сервера нет: история прогулок не покидает телефон. Синхронизация между
-            устройствами появится вместе с бэкендом — схема БД к ней уже готова.
-            До тех пор смена телефона означает потерю прогресса.
+            Маршруты прогулок, туман, уровень и ачивки живут только здесь и никуда
+            не уходят. Даже друзьям не видно, где вы ходили, — им видно только то,
+            что ниже.
+          </Text>
+          <Text style={styles.noteTitle}>Что видят друзья</Text>
+          <Text style={styles.noteBody}>
+            {serverReady
+              ? 'Имя, аватарку, сколько километров за неделю и вашу последнюю точку — во время прогулки, а круглосуточно только если вы включили это на экране друзей. Не друзьям не видно ничего.'
+              : 'Ничего: приложение собрано без ключей от сервера, и друзья в нём выдуманные.'}
+          </Text>
+          <Text style={styles.noteTitle}>Новый телефон</Text>
+          <Text style={styles.noteBody}>
+            Прогресс переносится файлом: «Резервная копия» выше. Сама по себе
+            история на новый телефон не приедет — сервера для неё нет.
           </Text>
           <Text style={styles.noteBody}>
             До следующего уровня: {levelXpRequirement(level) - xp} XP · Таймзона: {timeZone}
