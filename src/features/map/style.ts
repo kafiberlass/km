@@ -103,6 +103,59 @@ export function buildMapStyle(): StyleSpecification {
         },
       },
       {
+        /*
+          Названия улиц. Без них по карте непонятно, где именно стоишь:
+          дома и перекрёстки похожи друг на друга, а подписи районов
+          отвечают на другой вопрос.
+
+          symbol-placement: line — подпись ложится вдоль улицы и
+          повторяется через каждые 250 точек, чтобы попадалась на глаза
+          на длинных проспектах.
+        */
+        id: 'street-labels',
+        type: 'symbol',
+        source: 'omt',
+        'source-layer': 'transportation_name',
+        minzoom: 14,
+        layout: {
+          'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
+          'text-font': ['Noto Sans Regular'],
+          'symbol-placement': 'line',
+          'symbol-spacing': 250,
+          'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
+          'text-max-angle': 30,
+        },
+        paint: {
+          'text-color': palette.textMuted,
+          'text-halo-color': palette.parchmentBright,
+          'text-halo-width': 1.4,
+        },
+      },
+      {
+        /*
+          Номера домов. Появляются поздно, с 17-го зума: раньше они
+          сливаются в кашу и закрывают собой карту, а нужны ровно тогда,
+          когда человек ищет конкретный подъезд.
+        */
+        id: 'housenumbers',
+        type: 'symbol',
+        source: 'omt',
+        'source-layer': 'housenumber',
+        minzoom: 17,
+        layout: {
+          'text-field': ['get', 'housenumber'],
+          'text-font': ['Noto Sans Regular'],
+          'text-size': ['interpolate', ['linear'], ['zoom'], 17, 9, 19, 12],
+          'text-padding': 2,
+        },
+        paint: {
+          'text-color': palette.textMuted,
+          'text-opacity': 0.75,
+          'text-halo-color': palette.parchmentBright,
+          'text-halo-width': 1.2,
+        },
+      },
+      {
         // Города видно издалека, районы — на прогулочном масштабе, так что
         // подпись на экране есть всегда, на каком бы зуме ни стояла карта.
         id: 'place-labels',

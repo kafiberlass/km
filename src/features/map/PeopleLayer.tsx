@@ -11,11 +11,14 @@
  * не просыпается.
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
+  useSharedValue,
+  withRepeat,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
@@ -25,11 +28,13 @@ import {
   projectToScreenWorklet,
   type LngLat,
 } from '@/core/geo/mercator';
-import { fonts, palette } from '@/core/theme/tokens';
+import { fonts, palette, text } from '@/core/theme/tokens';
 import type { SharedCamera } from '@/features/fog/FogLayer';
 import { isFresh, type Friend } from '@/features/friends/types';
+import { splitByDistance, togetherLabel } from './together';
 import { spreadMarkers } from '@/features/globe/projection';
 import { Avatar } from '@/features/profile/Avatar';
+import { DropPin } from './DropPin';
 import { initialsOf } from '@/features/profile/avatars';
 
 const AVATAR = 40;
@@ -85,6 +90,16 @@ export function PeopleLayer({
 }: Props) {
   const originMerc = useMemo(() => lngLatToMercator(origin), [origin.lat, origin.lng]);
 
+  /*
+    Друзья, оказавшиеся рядом, не разводятся по карте, а собираются
+    в одну метку: они правда в одном месте, и это событие, а не помеха
+    отрисовке.
+  */
+  const { together, apart } = useMemo(
+    () => splitByDistance(me, friends, (friend) => friend.position),
+    [me.lat, me.lng, friends],
+  );
+
   const people = useMemo<Person[]>(() => {
     const list: Person[] = [
       {
@@ -99,7 +114,7 @@ export function PeopleLayer({
       },
     ];
 
-    for (const friend of friends) {
+    for (const friend of apart) {
       if (!friend.position) continue;
       list.push({
         key: friend.id,
@@ -114,7 +129,7 @@ export function PeopleLayer({
     }
 
     return list;
-  }, [me.lat, me.lng, friends, myAvatar, myName]);
+  }, [me.lat, me.lng, apart, myAvatar, myName]);
 
   const layout = useDerivedValue(() => {
     const matrix = cameraMatrixWorklet(
@@ -148,6 +163,7 @@ export function PeopleLayer({
           width={width}
           height={height}
           tracking={tracking}
+          together={person.self ? together : []}
         />
       ))}
     </View>
@@ -161,6 +177,7 @@ function PersonMarker({
   width,
   height,
   tracking,
+  together,
 }: {
   person: Person;
   index: number;
@@ -168,6 +185,8 @@ function PersonMarker({
   width: number;
   height: number;
   tracking: boolean;
+  /** Друзья, оказавшиеся рядом. Непустой список — только у своей метки. */
+  together: readonly Friend[];
 }) {
   const size = person.self ? HALO : AVATAR;
 
@@ -193,37 +212,77 @@ function PersonMarker({
   if (person.self) {
     return (
       <Animated.View style={[styles.selfMarker, style]}>
-        {/* Ореол под лицом: по нему свою метку видно даже тогда,
+        {/* Ореол под каплей: по нему свою метку видно даже тогда,
             когда лицо ещё слишком мелкое, чтобы его разглядеть. */}
         <View style={[styles.halo, tracking && styles.haloActive]} />
 
-        <View style={[styles.photoRing, styles.selfRing, { borderColor: palette.ember }]}>
-          <Avatar value={person.avatar} size={SELF_AVATAR - 6} name={person.name || 'Я'} />
+        {/* Рядом кто-то есть — вокруг метки расходится круг. Движение
+            здесь уместно: это не украшение, а единственный способ
+            заметить событие, не глядя в список друзей. */}
+        {together.length > 0 && <TogetherPulse />}
+
+        <View style={styles.selfRow}>
+          <DropPin size={SELF_AVATAR} color={palette.ember} border={3}>
+            <Avatar value={person.avatar} size={SELF_AVATAR - 8} name={person.name || 'Я'} />
+          </DropPin>
+
+          {/* Лица тех, кто рядом, — внахлёст, как стопка карточек. */}
+          {together.slice(0, 3).map((friend, index) => (
+            <View key={friend.id} style={[styles.stacked, { marginLeft: index === 0 ? -10 : -16 }]}>
+              <DropPin size={SELF_AVATAR - 8} color={friend.color} background={friend.color}>
+                <Avatar value={friend.avatar} size={SELF_AVATAR - 16} name={friend.name} />
+              </DropPin>
+            </View>
+          ))}
         </View>
+
+        {together.length > 0 && (
+          <Text style={styles.togetherText} numberOfLines={1}>
+            {togetherLabel(together.map((friend) => friend.name))}
+          </Text>
+        )}
       </Animated.View>
     );
   }
 
   return (
     <Animated.View style={[styles.marker, style]}>
-      <View style={[styles.avatarWrap, !person.live && styles.stale]}>
-        {person.avatar ? (
-          // Рамку цвета друга оставляем и под фотографией: по ней метки
-          // различаются на карте, когда лиц ещё не разглядеть.
-          <View style={[styles.photoRing, { borderColor: person.color }]}>
-            <Avatar value={person.avatar} size={AVATAR - 6} name={person.name} />
-          </View>
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: person.color }]}>
+      <View style={!person.live && styles.stale}>
+        <DropPin size={AVATAR} color={person.color} background={person.color}>
+          {person.avatar ? (
+            <Avatar value={person.avatar} size={AVATAR - 8} name={person.name} />
+          ) : (
             <Text style={styles.avatarText}>{person.initials}</Text>
-          </View>
-        )}
+          )}
+        </DropPin>
       </View>
       <Text style={styles.name} numberOfLines={1}>
         {person.name}
       </Text>
     </Animated.View>
   );
+}
+
+/**
+ * Круг, расходящийся от метки.
+ *
+ * Повторяется бесконечно, но медленно: две с половиной секунды на волну.
+ * Быстрее — и карта начинает мельтешить, а смотреть на неё приходится
+ * на ходу.
+ */
+function TogetherPulse() {
+  const wave = useSharedValue(0);
+
+  useEffect(() => {
+    wave.value = withRepeat(withTiming(1, { duration: 2500 }), -1, false);
+  }, [wave]);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.6 + wave.value * 1.1 }],
+    opacity: (1 - wave.value) * 0.55,
+  }));
+
+  return <Animated.View style={[styles.pulse, style]} pointerEvents="none" />;
 }
 
 const styles = StyleSheet.create({
@@ -251,35 +310,31 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   haloActive: { backgroundColor: palette.ember, opacity: 0.5 },
+  pulse: {
+    position: 'absolute',
+    width: HALO,
+    height: HALO,
+    borderRadius: HALO / 2,
+    borderWidth: 3,
+    borderColor: palette.ember,
+  },
+  selfRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  stacked: { marginTop: 4 },
+  togetherText: {
+    marginTop: 2,
+    color: palette.textOnMap,
+    fontSize: text.tab,
+    fontFamily: fonts.display,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textShadowColor: palette.mapHalo,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
   // Своё лицо: кольцо цвета тропы, чтобы метка читалась как «я»,
   // а не как ещё один друг.
-  selfRing: {
-    width: SELF_AVATAR,
-    height: SELF_AVATAR,
-    borderRadius: SELF_AVATAR / 2,
-    borderWidth: 3,
-  },
 
-  avatarWrap: { width: AVATAR, height: AVATAR },
   // Кружок под фотографию: сама она круглая, а рамка добавляет цвет друга.
-  photoRing: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    borderWidth: 2,
-    borderColor: palette.parchmentBright,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   stale: { opacity: 0.55 },
   avatarText: { color: palette.parchmentBright, fontFamily: fonts.display, fontWeight: '900', fontSize: 13 },
   name: {
