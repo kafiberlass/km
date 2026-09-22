@@ -347,6 +347,26 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     if (error) console.warn('[friends] неделя не отправилась', error.message);
   }
 
+  /** Место, до которого дошли. Одна строка на место, без маршрута. */
+  async publishVisit(visit: Omit<FriendVisit, 'id'>): Promise<void> {
+    const userId = await this.ensureSession();
+    if (!userId) return;
+
+    const { error } = await this.client.from('place_visits').insert({
+      user_id: userId,
+      title: visit.title,
+      type: visit.type,
+      lat: visit.lat,
+      lng: visit.lng,
+      visited_at: new Date(visit.visitedAt).toISOString(),
+    });
+
+    // Молча: место всё равно уже открыто, и ронять из-за этого прогулку
+    // нельзя. Частая причина — не выполненный docs/supabase/6-week.sql,
+    // где чинится список допустимых видов места.
+    if (error) console.warn('[friends] визит не отправился', error.message);
+  }
+
   /** Код, который диктуют другу. */
   async inviteCode(): Promise<string | null> {
     const userId = await this.ensureSession();

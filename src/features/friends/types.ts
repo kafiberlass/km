@@ -73,6 +73,13 @@ export interface FriendsProvider {
    * за чужие данные, и заводить его ради полоски незачем.
    */
   publishWeek?(meters: number): Promise<void>;
+  /**
+   * Рассказать друзьям об открытом месте.
+   *
+   * Уезжает только название, вид и точка самого места — не маршрут,
+   * которым человек к нему шёл.
+   */
+  publishVisit?(visit: Omit<FriendVisit, 'id'>): Promise<void>;
   /** Код, который диктуют другу. */
   inviteCode?(): Promise<string | null>;
   /** Связаться с другом по его коду. Бросает понятную ошибку. */

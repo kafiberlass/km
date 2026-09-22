@@ -130,6 +130,10 @@ export class MockFriendsProvider implements FriendsProvider {
     return Promise.resolve();
   }
 
+  publishVisit(): Promise<void> {
+    return Promise.resolve();
+  }
+
   setDisplayName(): Promise<void> {
     return Promise.resolve();
   }

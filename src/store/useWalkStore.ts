@@ -44,6 +44,7 @@ import { restoreWalk } from '@/core/walk/restore';
 import { isWalkResumable } from '@/core/walk/session';
 import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
 import { publishWeekIfNeeded } from '@/features/friends/weekPublisher';
+import { publishVisit } from '@/features/friends/visitPublisher';
 import { totalsSince } from '@/core/walk/history';
 import { sharingSetting } from '@/features/friends/sharingSetting';
 import {
@@ -716,6 +717,12 @@ function discoverPlacesAt(
 
   const openedIds = new Set(opened.map((place) => place.id));
   pendingPlaces = pendingPlaces.filter((place) => !openedIds.has(place.id));
+
+  // Друзьям — только что открытое место. Отправляется название и точка
+  // самого места, а не путь, которым к нему шли.
+  if (origin) {
+    for (const place of opened) publishVisit(origin, place, point.timestamp);
+  }
 
   const profile = repo.getProfile();
   const reward = opened.reduce((sum, place) => sum + place.xpReward, 0);
