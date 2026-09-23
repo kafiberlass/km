@@ -13,6 +13,7 @@
     "apk:cloud": "bash scripts/get-apk-cloud.sh",
     "apk": "bash scripts/get-apk.sh",
     "send": "bash scripts/publish.sh",
+    "emails": "bash scripts/supabase-emails.sh",
     "fonts": "bash scripts/get-fonts.sh",
     "setup:ios": "bash scripts/setup-ios.sh",
     "setup:ios:release": "bash scripts/setup-ios.sh --release",
