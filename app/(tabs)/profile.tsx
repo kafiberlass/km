@@ -163,6 +163,15 @@ export default function ProfileScreen() {
         </Pressable>
 
         <Pressable
+          onPress={() => router.push('/account')}
+          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
+        >
+          <Feather name="mail" size={18} color={palette.textDark} />
+          <Text style={styles.friendsText}>АККАУНТ</Text>
+          <Feather name="chevron-right" size={18} color={palette.textDark} />
+        </Pressable>
+
+        <Pressable
           onPress={() => router.push('/theme')}
           style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
         >
@@ -209,9 +218,10 @@ export default function ProfileScreen() {
               остался ровно там, где о нём вспоминают. */}
           <Text style={styles.noteTitle}>Новый телефон</Text>
           <Text style={styles.noteBody}>
-            Копия уезжает на сервер сама, после прогулки. На новом телефоне её
-            нужно забрать — и там же можно сохранить копию файлом, если сервер
-            не нравится.
+            Копия уезжает на сервер сама, после прогулки. Чтобы забрать её на новом
+            телефоне, нужен аккаунт: привяжите почту — без неё новый телефон заводит
+            другой аккаунт и до копии не дотягивается. Копию можно сохранить и файлом,
+            если сервер не нравится.
           </Text>
           <Pressable
             onPress={() => router.push('/backup')}

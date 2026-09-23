@@ -335,6 +335,71 @@ export class SupabaseFriendsProvider implements FriendsProvider {
     return stored;
   }
 
+  /**
+   * Аккаунт: почта вместо безымянной установки.
+   *
+   * Анонимный вход хорош ровно до первой смены телефона. Аккаунт живёт
+   * внутри установки приложения, и на новом телефоне заводится другой:
+   * новый код для друзей, а копия на сервере лежит в папке прежнего
+   * и остаётся недостижимой. Почта — то, по чему человека можно узнать
+   * на новом устройстве.
+   *
+   * Привязка не создаёт второй аккаунт, а достраивает текущий: друзья,
+   * код и копия остаются на месте. Поэтому здесь updateUser, а не
+   * регистрация, и подтверждение приходит как смена почты.
+   */
+  async accountEmail(): Promise<string | null> {
+    await this.ensureSession();
+    const { data } = await this.client.auth.getUser();
+    const email = data.user?.email;
+    return email != null && email.length > 0 ? email : null;
+  }
+
+  async linkEmail(email: string): Promise<void> {
+    await this.ensureSession();
+    const { error } = await this.client.auth.updateUser({ email });
+    if (error) throw new Error(error.message);
+  }
+
+  async confirmLink(email: string, code: string): Promise<void> {
+    const { error } = await this.client.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'email_change',
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Вход на новом телефоне.
+   *
+   * shouldCreateUser: false — принципиально. Иначе опечатка в адресе
+   * молча заводит новый пустой аккаунт, письмо приходит, код подходит,
+   * и человек оказывается в чистом приложении вместо своей истории,
+   * не понимая, что произошло.
+   */
+  async signInByEmail(email: string): Promise<void> {
+    const { error } = await this.client.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async confirmSignIn(email: string, code: string): Promise<void> {
+    const { data, error } = await this.client.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'email',
+    });
+    if (error) throw new Error(error.message);
+
+    // Сессия сменилась: дальше всё — друзья, копия, код — должно идти
+    // от нового человека, а не от того, кто был в приложении до входа.
+    this.userId = data.user?.id ?? null;
+    this.refresh();
+  }
+
   /** Сколько прошёл за неделю — одним числом, без маршрута. */
   async publishWeek(meters: number): Promise<void> {
     const userId = await this.ensureSession();
