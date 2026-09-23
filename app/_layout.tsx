@@ -10,7 +10,7 @@ import { useFonts } from 'expo-font';
 import { migrate } from '@/core/db/client';
 import { describeError, rememberError } from '@/core/errors/lastError';
 import { CrashScreen } from '@/ui/CrashScreen';
-import { seedDemoPlaces } from '@/features/places/seed';
+import { syncDemoPlaces } from '@/features/places/seed';
 import { fonts, palette, text } from '@/core/theme/tokens';
 import { handleAuthLink } from '@/features/account/session';
 import { useWalkStore } from '@/store/useWalkStore';
@@ -98,7 +98,7 @@ export default function RootLayout() {
       // Схема поднимается синхронно до первого экрана: половина приложения
       // читает БД прямо в рендере, асинхронная инициализация дала бы гонки.
       migrate();
-      seedDemoPlaces();
+      syncDemoPlaces();
       hydrate();
       setReady(true);
     } catch (e) {

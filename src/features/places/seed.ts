@@ -1,15 +1,25 @@
 /**
- * Демо-места для скелета.
+ * Демо-места: четыре точки у Чистых прудов, там же, где идёт демо-трек.
  *
- * В проде это будет импорт OSM-экстракта (Geofabrik, лицензия ODbL)
- * или Foursquare Open Source Places. Google Places сознательно не берём:
- * дорого и запрещено кэшировать, см. разбор расходов.
+ * Нужны они ровно в одном случае — пока приложение не знает, где человек
+ * живёт, и показать на карте нечего. Как только дом известен, места
+ * приезжают настоящие, из OpenStreetMap.
+ *
+ * Отсюда правило ниже. Раньше демо-места исчезали только после удачного
+ * поиска в OSM, а до тех пор человек в Казани разглядывал кофейню
+ * на Мясницкой и пекарню на Покровке. Поиск же может не случиться долго:
+ * не было связи, сервер карт был занят, приложение открыли в метро.
+ * Поэтому теперь они уходят по самому факту «дом не в Москве», не
+ * дожидаясь ничьего ответа.
  */
 
-import { allPlaces, upsertPlaces } from '@/core/db/repo';
+import { allPlaces, getProfile, removeDemoPlaces, upsertPlaces } from '@/core/db/repo';
 
-/** Чистые пруды, Москва — там же начинается демо-трек в assets/fixtures. */
-export const DEMO_CENTER: [number, number] = [37.6425, 55.7625];
+import { DEMO_CENTER, demoPlacesFit } from './demo';
+
+// Дальше по приложению DEMO_CENTER берут отсюда: точка переехала
+// в отдельный файл ради тестов, а не ради переименований.
+export { DEMO_CENTER, DEMO_FAR_M, demoPlacesFit } from './demo';
 
 const DEMO_PLACES = [
   {
@@ -54,7 +64,25 @@ const DEMO_PLACES = [
   },
 ] as const;
 
-export function seedDemoPlaces(): void {
+/**
+ * Привести демо-места в соответствие с тем, где человек живёт.
+ *
+ * Вызывается при каждом запуске: дом появляется не сразу, а с первой
+ * принятой точкой GPS, и момент «теперь мы знаем, где он» приложение
+ * специально не ловит.
+ */
+export function syncDemoPlaces(): void {
+  const profile = getProfile();
+  const origin =
+    profile.originLat != null && profile.originLng != null
+      ? { lat: profile.originLat, lng: profile.originLng }
+      : null;
+
+  if (!demoPlacesFit(origin)) {
+    removeDemoPlaces();
+    return;
+  }
+
   if (allPlaces().length > 0) return;
   upsertPlaces(DEMO_PLACES.map((p) => ({ ...p })));
 }

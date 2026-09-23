@@ -51,6 +51,14 @@ interface Props {
   /** Отключает туман целиком — удобно для сравнения FPS в дев-панели. */
   enabled?: boolean;
   /** Показать оранжевую тропу поверх раскрытой зоны. */
+  /**
+   * Светящаяся тропа поверх раскрытого коридора.
+   *
+   * Выключена по умолчанию. Смысл карты — в границе между пройденным
+   * и остальным, а тропа рисует ещё и точный маршрут поверх той же
+   * земли: две линии об одном и том же, и вторая мешает читать первую.
+   * Код оставлен: вернуть её — одно слово в MapStack.
+   */
   showTrail?: boolean;
 }
 
@@ -61,7 +69,7 @@ export function FogLayer({
   width,
   height,
   enabled = true,
-  showTrail = true,
+  showTrail = false,
 }: Props) {
   const originMerc = useMemo(() => lngLatToMercator(origin), [origin.lat, origin.lng]);
 
