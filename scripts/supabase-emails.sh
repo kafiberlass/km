@@ -51,6 +51,67 @@ fi
 
 [ -n "${SUPABASE_ACCESS_TOKEN:-}" ] || fail "Без токена применить шаблоны нельзя."
 
+# Проверки по шагам: «не подошёл токен», «не тот проект» и «не хватает
+# прав» лечатся по-разному, а снаружи выглядят одинаково — отказом.
+api() {
+  curl -sS -w '\n%{http_code}' \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H 'Content-Type: application/json' \
+    "$@"
+}
+
+status_of() { printf '%s' "$1" | tail -1; }
+body_of() { printf '%s' "$1" | sed '$d'; }
+
+step "Проверяю токен"
+whoami_res="$(api "https://api.supabase.com/v1/projects")" \
+  || fail "Не получилось связаться с Supabase. Проверьте интернет."
+
+case "$(status_of "$whoami_res")" in
+  2*) ;;
+  401)
+    fail "Токен не принят.
+
+Похоже, вставлен не тот ключ. Нужен именно токен доступа со страницы
+https://supabase.com/dashboard/account/tokens — тот, что начинается
+на sbp_. Ключи из .env (anon, service_role) сюда не подходят: они
+работают с данными, а не с настройками проекта." ;;
+  403)
+    warn "  Ответ сервера:"
+    printf '%s\n' "$(body_of "$whoami_res")"
+    fail "Токен принят, но читать список проектов ему не разрешают.
+
+Так бывает, когда токен создан в аккаунте, который не владеет
+организацией. Зайдите на https://supabase.com/dashboard/account/tokens
+тем же аккаунтом, которым вы заходите в проект, и создайте токен там." ;;
+  *)
+    warn "  Ответ сервера:"
+    printf '%s\n' "$(body_of "$whoami_res")"
+    fail "Неожиданный ответ при проверке токена." ;;
+esac
+
+if ! printf '%s' "$(body_of "$whoami_res")" | grep -q "\"$REF\""; then
+  warn "  Проекты, доступные этому токену:"
+  printf '%s' "$(body_of "$whoami_res")" | node -e '
+    let input = "";
+    process.stdin.on("data", (chunk) => (input += chunk));
+    process.stdin.on("end", () => {
+      try {
+        for (const project of JSON.parse(input)) {
+          process.stdout.write(`    ${project.id}  ${project.name}\n`);
+        }
+      } catch {
+        process.stdout.write("    (список не разобрался)\n");
+      }
+    });
+  ' || true
+  fail "Среди них нет проекта $REF из .env.
+
+Либо токен создан в другом аккаунте, либо в .env адрес другого проекта."
+fi
+
+bold "  Токен рабочий, проект на месте"
+
 MAGIC="$(cat docs/supabase/emails/magic-link.html)"
 CHANGE="$(cat docs/supabase/emails/email-change.html)"
 
@@ -70,14 +131,12 @@ BODY="$(MAGIC="$MAGIC" CHANGE="$CHANGE" node -e '
 ')"
 
 step "Применяю"
-response="$(curl -sS -w '\n%{http_code}' -X PATCH \
+response="$(api -X PATCH \
   "https://api.supabase.com/v1/projects/$REF/config/auth" \
-  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-  -H 'Content-Type: application/json' \
   -d "$BODY")" || fail "Не получилось связаться с Supabase. Проверьте интернет."
 
-code="$(printf '%s' "$response" | tail -1)"
-payload="$(printf '%s' "$response" | sed '$d')"
+code="$(status_of "$response")"
+payload="$(body_of "$response")"
 
 unset SUPABASE_ACCESS_TOKEN
 
@@ -92,11 +151,11 @@ case "$code" in
 
 NOTE
     ;;
-  401|403)
-    fail "Токен не подошёл ($code). Проверьте, что он создан на
-https://supabase.com/dashboard/account/tokens и скопирован целиком." ;;
   *)
-    warn "Сервер ответил $code:"
+    # Причину пишет сервер, и выбрасывать её было ошибкой: «не подошёл
+    # токен» и «на бесплатном тарифе так нельзя» выглядят одинаково,
+    # а делать надо разное.
+    warn "  Сервер ответил $code:"
     printf '%s\n' "$payload"
     fail "Шаблоны не применились.
 
