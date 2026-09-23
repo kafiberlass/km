@@ -2,15 +2,17 @@
  * Резервная копия.
  *
  * Вся карта живёт в телефоне: потерял телефон — потерял год ходьбы.
- * Копия — обычный файл, который система предлагает положить куда угодно:
- * в «Файлы», в облако, отправить себе же в мессенджер.
+ * Поэтому копия уезжает на сервер сама, после прогулки, и человеку
+ * не нужно про неё помнить — а помнить про резервные копии не помнит
+ * никто, пока не потеряет телефон.
  *
- * Ни экспорт, ни импорт не требуют интернета и чужих серверов — человек
- * сам решает, где лежит его история.
+ * Рядом остаётся прежний способ — копия файлом. Он не требует ни
+ * интернета, ни чужих серверов, и в нём история никуда не уходит;
+ * в этом вся разница между двумя способами, и она сказана на экране.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -22,6 +24,7 @@ import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens'
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton, Stat } from '@/ui/widgets';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
+import { autoBackupSetting, useAutoBackup } from '@/features/backup/auto';
 import type { RemoteBackup } from '@/features/friends/types';
 import { useWalkStore } from '@/store/useWalkStore';
 
@@ -56,6 +59,7 @@ export default function BackupScreen() {
 
   const serverReady = isServerConfigured();
   const [remote, setRemote] = useState<RemoteBackup | null>(null);
+  const auto = useAutoBackup();
 
   // Что лежит на сервере, спрашиваем один раз при открытии экрана.
   useEffect(() => {
@@ -91,6 +95,12 @@ export default function BackupScreen() {
       setBusy(false);
     }
   }, []);
+
+  const toggleAuto = useCallback(() => {
+    // Включили — не ждём конца следующей прогулки: человек нажал это
+    // сейчас, значит копия нужна сейчас.
+    if (autoBackupSetting.toggle()) void saveRemote();
+  }, [saveRemote]);
 
   const restoreRemote = useCallback(async () => {
     setBusy(true);
@@ -250,30 +260,30 @@ export default function BackupScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>СОХРАНИТЬ</Text>
-          <Text style={styles.body}>
-            Приложение соберёт файл и откроет окно «Поделиться»: положите его в «Файлы»,
-            в облако или отправьте себе. Интернет для этого не нужен.
-          </Text>
-          <ActionButton label="СОХРАНИТЬ КОПИЮ" onPress={() => void save()} disabled={busy} />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>ВОССТАНОВИТЬ</Text>
-          <Text style={styles.body}>
-            Выберите файл копии. Всё, что сейчас в телефоне, будет заменено — прогулки,
-            туман, уровень. Приложение переспросит перед заменой.
-          </Text>
-          <ActionButton
-            label="ВОССТАНОВИТЬ ИЗ ФАЙЛА"
-            tone="ghost"
-            onPress={() => void restore()}
-            disabled={busy}
-          />
-        </View>
-
-        <View style={styles.card}>
           <Text style={styles.cardTitle}>КОПИЯ НА СЕРВЕРЕ</Text>
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchBody}>
+              <Text style={styles.switchTitle}>
+                {auto ? 'Копия сохраняется сама' : 'Копия сохраняется вручную'}
+              </Text>
+              <Text style={styles.body}>
+                {auto
+                  ? 'После прогулки приложение отправляет копию на сервер само, но не чаще раза в полсуток — чтобы не тратить мобильный интернет впустую.'
+                  : 'Приложение ничего не отправляет. Копия появится на сервере только по кнопке ниже.'}
+              </Text>
+            </View>
+
+            <Switch
+              value={auto}
+              onValueChange={toggleAuto}
+              trackColor={{ false: palette.sand, true: palette.ember }}
+              thumbColor={palette.parchmentBright}
+              disabled={!serverReady}
+              accessibilityLabel="Автоматическая копия на сервере"
+            />
+          </View>
+
           <Text style={styles.body}>
             {remote == null
               ? 'На сервере копии пока нет.'
@@ -286,7 +296,7 @@ export default function BackupScreen() {
           </Text>
 
           <ActionButton
-            label="СОХРАНИТЬ НА СЕРВЕР"
+            label="СОХРАНИТЬ СЕЙЧАС"
             onPress={() => void saveRemote()}
             disabled={busy || !serverReady}
           />
@@ -302,6 +312,30 @@ export default function BackupScreen() {
               Сервер не настроен: приложение собрано без ключей, и класть копию некуда.
             </Text>
           )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>КОПИЯ ФАЙЛОМ</Text>
+          <Text style={styles.body}>
+            Приложение соберёт файл и откроет окно «Поделиться»: положите его в «Файлы»,
+            в облако или отправьте себе. Интернет для этого не нужен, и на сервер
+            ничего не уходит.
+          </Text>
+          <ActionButton label="СОХРАНИТЬ ФАЙЛОМ" onPress={() => void save()} disabled={busy} />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>ВОССТАНОВИТЬ ИЗ ФАЙЛА</Text>
+          <Text style={styles.body}>
+            Выберите файл копии. Всё, что сейчас в телефоне, будет заменено — прогулки,
+            туман, уровень. Приложение переспросит перед заменой.
+          </Text>
+          <ActionButton
+            label="ВЫБРАТЬ ФАЙЛ"
+            tone="ghost"
+            onPress={() => void restore()}
+            disabled={busy}
+          />
         </View>
 
         {busy && <ActivityIndicator color={palette.ember} />}
@@ -341,6 +375,14 @@ const styles = StyleSheet.create({
     fontSize: text.meta,
   },
   body: { color: palette.textDark, fontFamily: fonts.body, fontSize: text.body },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  switchBody: { flex: 1, gap: spacing.xs },
+  switchTitle: {
+    color: palette.textDark,
+    fontFamily: fonts.display,
+    fontWeight: '700',
+    fontSize: text.body,
+  },
   message: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ok: { color: palette.teal, fontFamily: fonts.display, fontWeight: '700', flex: 1 },
   error: { color: palette.rust, fontFamily: fonts.display, fontWeight: '700', flex: 1 },

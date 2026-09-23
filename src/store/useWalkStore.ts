@@ -45,6 +45,7 @@ import { isWalkResumable } from '@/core/walk/session';
 import { publishIfNeeded, resetPublisher } from '@/features/friends/publisher';
 import { publishWeekIfNeeded } from '@/features/friends/weekPublisher';
 import { publishVisit } from '@/features/friends/visitPublisher';
+import { autoBackup } from '@/features/backup/auto';
 import { totalsSince } from '@/core/walk/history';
 import { sharingSetting } from '@/features/friends/sharingSetting';
 import {
@@ -300,6 +301,11 @@ export const useWalkStore = create<WalkState>((set, get) => ({
     // Друзьям — только что обновившийся недельный итог. Именно здесь,
     // а не по таймеру: это тот момент, когда пройденное хочется показать.
     shareWeek({ force: true });
+
+    // Копию на сервер — по той же причине: прогулка записана, и именно
+    // сейчас появилось что терять. Решение «пора или нет» принимается
+    // внутри, отправка идёт мимо этого кода и ничего не ждёт.
+    autoBackup();
 
     clearActiveWalk();
     resetPublisher();

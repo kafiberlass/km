@@ -516,3 +516,15 @@ export function buildSnapshot(homeRegionTotalCells: number): ProgressSnapshot {
     districtsDone,
   };
 }
+
+/**
+ * Сколько всего прогулок записано.
+ *
+ * Нужно автоматической копии: по этому числу видно, появилось ли
+ * с прошлого раза что сохранять. Считать через выборку прогулок ради
+ * одного числа — читать всю таблицу.
+ */
+export function countSessions(): number {
+  const res = getRawDb().executeSync('SELECT COUNT(*) AS n FROM walk_sessions');
+  return Number((res.rows[0] as { n: number } | undefined)?.n ?? 0);
+}
