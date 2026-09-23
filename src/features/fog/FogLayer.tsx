@@ -105,7 +105,14 @@ export function FogLayer({
           </Group>
         }
       >
-        <Rect x={0} y={0} width={width} height={height} color={palette.fogVeil} />
+        <Rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          color={palette.fogVeil}
+          opacity={theme.fog.veilOpacity}
+        />
       </Mask>
 
       {/* Живность — поверх тумана, но привязана к земле той же матрицей.

@@ -5,6 +5,10 @@
  * (см. autoWalk.ts и useWalkStore.observe). Но молчащий интерфейс в такой
  * схеме хуже кнопки — человек должен видеть, что приложение его слышит:
  * ждёт, пишет или не может, потому что ему не дали доступ.
+ *
+ * Объяснения «запись включится сама, когда вы пойдёте» здесь больше нет:
+ * оно нужно ровно один раз, в первый запуск, а дальше висит на карте
+ * каждый день и занимает место.
  */
 
 import React from 'react';
@@ -71,9 +75,6 @@ export function WalkStatus() {
           </>
         )}
       </View>
-      <View style={styles.hintWrap}>
-        <Text style={styles.hint}>запись включится сама, когда вы пойдёте</Text>
-      </View>
     </View>
   );
 }
@@ -114,14 +115,6 @@ const styles = StyleSheet.create({
   divider: { width: 1, height: 16, backgroundColor: palette.textMuted, opacity: 0.4 },
   sharingText: { color: palette.emberDeep, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: text.meta },
   deniedText: { color: palette.textOnDark, fontFamily: fonts.display, fontWeight: '900', letterSpacing: 1, fontSize: text.meta },
-  // Стекло под подсказкой: под ней бывает и светлая земля, и тёмный
-  // туман, и на одном из двух текст пропадал целиком.
-  hintWrap: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: radii.pill,
-    backgroundColor: palette.glass,
-  },
   hint: {
     fontFamily: fonts.body,
     color: palette.textDark,

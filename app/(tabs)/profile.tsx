@@ -163,15 +163,6 @@ export default function ProfileScreen() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push('/backup')}
-          style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
-        >
-          <Feather name="save" size={18} color={palette.textDark} />
-          <Text style={styles.friendsText}>РЕЗЕРВНАЯ КОПИЯ</Text>
-          <Feather name="chevron-right" size={18} color={palette.textDark} />
-        </Pressable>
-
-        <Pressable
           onPress={() => router.push('/theme')}
           style={({ pressed }) => [styles.friends, pressed && styles.settingsPressed]}
         >
@@ -212,12 +203,24 @@ export default function ProfileScreen() {
               ? 'Имя, аватарку, километры за неделю, места, до которых вы дошли, и последнюю точку — во время прогулки, а круглосуточно только если вы включили это на экране друзей. Не друзьям не видно ничего.'
               : 'Ничего: приложение собрано без ключей от сервера, и друзья в нём выдуманные.'}
           </Text>
+          {/* Отдельной кнопки «резервная копия» в списке больше нет: копия
+              уезжает на сервер сама, и напоминать о ней незачем. Но перенести
+              прогресс на новый телефон без этого экрана нельзя — поэтому вход
+              остался ровно там, где о нём вспоминают. */}
           <Text style={styles.noteTitle}>Новый телефон</Text>
           <Text style={styles.noteBody}>
-            Прогресс переносится через «Резервную копию»: файлом или через сервер,
-            на выбор. Файл никуда не уходит с телефона; копия на сервере лежит
-            в закрытом хранилище, и читать её можете только вы.
+            Копия уезжает на сервер сама, после прогулки. На новом телефоне её
+            нужно забрать — и там же можно сохранить копию файлом, если сервер
+            не нравится.
           </Text>
+          <Pressable
+            onPress={() => router.push('/backup')}
+            style={({ pressed }) => [styles.noteLink, pressed && styles.settingsPressed]}
+          >
+            <Feather name="save" size={16} color={palette.textDark} />
+            <Text style={styles.noteLinkText}>КОПИЯ И ВОССТАНОВЛЕНИЕ</Text>
+            <Feather name="chevron-right" size={16} color={palette.textDark} />
+          </Pressable>
           <Text style={styles.noteBody}>
             До следующего уровня: {levelXpRequirement(level) - xp} XP · Таймзона: {timeZone}
           </Text>
@@ -346,5 +349,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   noteTitle: { color: palette.gold, fontFamily: fonts.display, fontWeight: '900' },
+  noteLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  noteLinkText: {
+    flex: 1,
+    color: palette.textDark,
+    fontFamily: fonts.display,
+    fontWeight: '700',
+    letterSpacing: 1,
+    fontSize: text.meta,
+  },
   noteBody: { color: palette.parchment, lineHeight: 20 },
 });
