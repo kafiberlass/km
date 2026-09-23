@@ -4,13 +4,16 @@
  * До этого экрана аккаунт заводился молча при первом запуске и жил внутри
  * установки приложения. Разбила телефон, купила новый, поставила заново —
  * завёлся другой аккаунт: новый код для друзей, а копия на сервере
- * осталась лежать в папке прежнего и стала недостижимой. То есть
- * автоматическая копия спасала от разбитого экрана, но не от смены
- * телефона — ровно от того случая, ради которого её и заводят.
+ * осталась в папке прежнего и стала недостижимой. То есть автоматическая
+ * копия спасала от разбитого экрана, но не от смены телефона — ровно
+ * от того случая, ради которого её и заводят.
  *
- * Пароля нет: его надо придумать и помнить, а забывшие всё равно пойдут
- * восстанавливать через ту же почту. Шестизначный код из письма — тот же
- * путь, только короче.
+ * Подтверждение идёт ссылкой из письма, а не шестизначным кодом, и это
+ * не выбор, а обстоятельство: код живёт в шаблоне письма, а менять
+ * шаблоны на бесплатном тарифе Supabase не разрешает вовсе — отвечает
+ * «email template modification is not available for free tier projects».
+ * Заводское письмо со ссылкой при этом работает прекрасно, если ссылка
+ * ведёт в приложение, а не в браузер.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -20,14 +23,8 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { fonts, line, palette, radii, spacing, text } from '@/core/theme/tokens';
-import {
-  CODE_LENGTH,
-  authMessage,
-  isValidCode,
-  isValidEmail,
-  maskEmail,
-  normalizeEmail,
-} from '@/features/account/email';
+import { authMessage, isValidEmail, maskEmail, normalizeEmail } from '@/features/account/email';
+import { useAccountEvent } from '@/features/account/session';
 import { createFriendsProvider, isServerConfigured } from '@/features/friends';
 import { ScreenHeader } from '@/ui/ScreenHeader';
 import { ActionButton } from '@/ui/widgets';
@@ -37,27 +34,19 @@ const ORIGIN = { lat: 0, lng: 0 };
 type Note = { text: string; ok: boolean } | null;
 
 /**
- * Одна и та же форма для двух разных дел: привязать почту и войти.
+ * Одна форма на два дела: привязать почту и войти.
  *
- * Шаги совпадают до последней кнопки — адрес, письмо, код, — и
- * дублировать их значит завести два места, где можно по-разному
- * обработать опечатку.
+ * Шаги совпадают полностью — адрес, письмо, ссылка, — и разводить их
+ * значит завести два места, где по-разному обрабатывается опечатка.
  */
 function EmailForm({
   action,
-  confirmLabel,
   onSend,
-  onConfirm,
-  onDone,
 }: {
   action: string;
-  confirmLabel: string;
   onSend: (email: string) => Promise<void>;
-  onConfirm: (email: string, code: string) => Promise<void>;
-  onDone: (email: string) => void;
 }) {
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<Note>(null);
@@ -82,25 +71,6 @@ function EmailForm({
     }
   }, [email, onSend]);
 
-  const confirm = useCallback(async () => {
-    if (!isValidCode(code)) {
-      setNote({ text: `В коде ${CODE_LENGTH} цифр`, ok: false });
-      return;
-    }
-
-    setBusy(true);
-    setNote(null);
-    try {
-      const address = normalizeEmail(email);
-      await onConfirm(address, code.trim());
-      onDone(address);
-    } catch (error) {
-      setNote({ text: authMessage(error), ok: false });
-    } finally {
-      setBusy(false);
-    }
-  }, [code, email, onConfirm, onDone]);
-
   return (
     <>
       <TextInput
@@ -116,35 +86,21 @@ function EmailForm({
         style={styles.input}
       />
 
-      {sent && (
-        <TextInput
-          value={code}
-          onChangeText={setCode}
-          placeholder="код из письма"
-          placeholderTextColor={palette.textMuted}
-          keyboardType="number-pad"
-          textContentType="oneTimeCode"
-          maxLength={CODE_LENGTH}
-          editable={!busy}
-          style={[styles.input, styles.code]}
-        />
-      )}
-
-      {sent ? (
-        <>
-          <ActionButton label={confirmLabel} onPress={() => void confirm()} disabled={busy} />
-          <ActionButton
-            label="ОТПРАВИТЬ ПИСЬМО ЗАНОВО"
-            tone="ghost"
-            onPress={() => void send()}
-            disabled={busy}
-          />
-        </>
-      ) : (
-        <ActionButton label={action} onPress={() => void send()} disabled={busy} />
-      )}
+      <ActionButton
+        label={sent ? 'ОТПРАВИТЬ ПИСЬМО ЗАНОВО' : action}
+        tone={sent ? 'ghost' : 'primary'}
+        onPress={() => void send()}
+        disabled={busy}
+      />
 
       {busy && <ActivityIndicator color={palette.ember} />}
+
+      {sent && (
+        <Text style={styles.body}>
+          Откройте письмо и нажмите ссылку — приложение откроется само, вводить ничего
+          не нужно. Письмо идёт до минуты и любит попадать в «Промоакции» и спам.
+        </Text>
+      )}
 
       {note != null && (
         <View style={styles.note}>
@@ -167,6 +123,11 @@ export default function AccountScreen() {
   // null — ещё спрашиваем, '' — аккаунт анонимный, адрес — привязан.
   const [email, setEmail] = useState<string | null>(null);
 
+  // Ссылку из письма ловит корневой слушатель: экран узнаёт о входе
+  // отсюда, а не из собственной кнопки, — человек мог открыть письмо
+  // и через час, и с закрытым приложением.
+  const event = useAccountEvent();
+
   useEffect(() => {
     if (!serverReady) {
       setEmail('');
@@ -183,7 +144,8 @@ export default function AccountScreen() {
     return () => {
       cancelled = true;
     };
-  }, [serverReady]);
+    // Успешный вход меняет всё: аккаунт спрашиваем заново.
+  }, [serverReady, event]);
 
   const linked = email != null && email.length > 0;
 
@@ -197,6 +159,22 @@ export default function AccountScreen() {
       />
 
       <View style={styles.content}>
+        {event != null && (
+          <View style={[styles.card, event.ok ? styles.cardOk : styles.cardBad]}>
+            <View style={styles.note}>
+              <Feather
+                name={event.ok ? 'check-circle' : 'alert-triangle'}
+                size={16}
+                color={event.ok ? palette.teal : palette.rust}
+              />
+              <Text style={event.ok ? styles.ok : styles.error}>{event.message}</Text>
+            </View>
+            {event.ok && (
+              <ActionButton label="ЗАБРАТЬ ИСТОРИЮ" onPress={() => router.push('/backup')} />
+            )}
+          </View>
+        )}
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>СЕЙЧАС</Text>
           {email == null ? (
@@ -219,20 +197,15 @@ export default function AccountScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>ПРИВЯЗАТЬ ПОЧТУ</Text>
             <Text style={styles.body}>
-              Придёт письмо с кодом из {CODE_LENGTH} цифр. Пароль придумывать не нужно.
-              Друзья, код и история остаются на месте — аккаунт не меняется, а получает имя.
+              Придёт письмо со ссылкой. Пароль придумывать не нужно. Друзья, код и история
+              остаются на месте — аккаунт не меняется, а получает имя.
             </Text>
 
             <EmailForm
-              action="ОТПРАВИТЬ КОД"
-              confirmLabel="ПРИВЯЗАТЬ"
+              action="ОТПРАВИТЬ ПИСЬМО"
               onSend={async (address) => {
                 await createFriendsProvider(ORIGIN).linkEmail?.(address);
               }}
-              onConfirm={async (address, code) => {
-                await createFriendsProvider(ORIGIN).confirmLink?.(address, code);
-              }}
-              onDone={(address) => setEmail(address)}
             />
           </View>
         )}
@@ -247,17 +220,9 @@ export default function AccountScreen() {
             </Text>
 
             <EmailForm
-              action="ОТПРАВИТЬ КОД"
-              confirmLabel="ВОЙТИ"
+              action="ОТПРАВИТЬ ПИСЬМО"
               onSend={async (address) => {
                 await createFriendsProvider(ORIGIN).signInByEmail?.(address);
-              }}
-              onConfirm={async (address, code) => {
-                await createFriendsProvider(ORIGIN).confirmSignIn?.(address, code);
-              }}
-              onDone={(address) => {
-                setEmail(address);
-                router.push('/backup');
               }}
             />
           </View>
@@ -287,6 +252,8 @@ const styles = StyleSheet.create({
     backgroundColor: palette.parchment,
     gap: spacing.sm,
   },
+  cardOk: { borderColor: palette.teal },
+  cardBad: { borderColor: palette.rust },
   cardTitle: {
     color: palette.textMuted,
     fontFamily: fonts.display,
@@ -305,12 +272,6 @@ const styles = StyleSheet.create({
     color: palette.textDark,
     fontFamily: fonts.body,
     fontSize: text.body,
-  },
-  code: {
-    fontFamily: fonts.display,
-    fontWeight: '900',
-    letterSpacing: 6,
-    textAlign: 'center',
   },
   note: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ok: { color: palette.teal, fontFamily: fonts.display, fontWeight: '700', flex: 1 },

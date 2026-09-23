@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 #
-# Применить шаблоны писем к проекту Supabase.
+# Настроить письма проекта Supabase.
 #
 #   npm run emails
 #
-# Зачем скрипт вместо «зайдите в панель и вставьте два куска текста»:
-# шаблоны — часть приложения, а не настройка, которую помнит один человек.
-# Приложение ждёт из письма шестизначный код, и если шаблон вернуть
-# к заводскому, вход перестанет работать с формулировкой «код не подошёл».
-# Пусть лежат в репозитории и накатываются одной командой.
+# Главное, что делает скрипт, — прописывает адрес, на который письмо
+# возвращает человека: km://auth вместо заводского localhost:3000.
+# Без этого ссылка из письма открывает пустой браузер, и вход в аккаунт
+# не работает вовсе.
+#
+# Шаблоны писем он тоже пытается применить, но это необязательная часть:
+# на бесплатном тарифе со встроенной почтой Supabase менять их запрещает
+# и отвечает «email template modification is not available for free tier
+# projects». Заводское письмо со ссылкой при этом работает прекрасно —
+# приложение умеет принимать ссылку, а не только код.
 #
 # Токен берётся из переменной окружения или спрашивается здесь же и
 # в историю команд не попадает. В переписку его присылать нельзя никогда:
@@ -115,51 +120,61 @@ bold "  Токен рабочий, проект на месте"
 MAGIC="$(cat docs/supabase/emails/magic-link.html)"
 CHANGE="$(cat docs/supabase/emails/email-change.html)"
 
-step "Собираю запрос"
-# Через node, а не склейкой строк: в шаблонах кавычки и переводы строк,
-# и руками их экранировать — способ получить сломанный JSON.
+# Адрес возврата — обязательная часть. Схема km объявлена в app.json;
+# по ней телефон узнаёт ссылку и открывает приложение вместо браузера.
+step "Прописываю адрес возврата"
+URLS='{"site_url":"km://auth","uri_allow_list":"km://auth,km://*"}'
+
+response="$(api -X PATCH \
+  "https://api.supabase.com/v1/projects/$REF/config/auth" \
+  -d "$URLS")" || fail "Не получилось связаться с Supabase. Проверьте интернет."
+
+case "$(status_of "$response")" in
+  2*) bold "  km://auth прописан" ;;
+  *)
+    warn "  Сервер ответил $(status_of "$response"):"
+    printf '%s\n' "$(body_of "$response")"
+    unset SUPABASE_ACCESS_TOKEN
+    fail "Адрес возврата не прописался, а без него ссылка из письма
+откроет пустой браузер.
+
+Руками: Authentication → URL Configuration → Site URL → km://auth" ;;
+esac
+
+# Шаблоны — необязательная часть: на бесплатном тарифе их менять нельзя.
+step "Пробую шаблоны писем"
 BODY="$(MAGIC="$MAGIC" CHANGE="$CHANGE" node -e '
   process.stdout.write(
     JSON.stringify({
-      site_url: "km://",
-      mailer_subjects_magic_link: "Код для входа в КМ",
+      mailer_subjects_magic_link: "Вход в КМ",
       mailer_templates_magic_link_content: process.env.MAGIC,
-      mailer_subjects_email_change: "Код для привязки почты",
+      mailer_subjects_email_change: "Почта для КМ",
       mailer_templates_email_change_content: process.env.CHANGE,
     }),
   );
 ')"
 
-step "Применяю"
 response="$(api -X PATCH \
   "https://api.supabase.com/v1/projects/$REF/config/auth" \
-  -d "$BODY")" || fail "Не получилось связаться с Supabase. Проверьте интернет."
+  -d "$BODY")" || true
 
-code="$(status_of "$response")"
-payload="$(body_of "$response")"
-
+templates="$(status_of "$response")"
 unset SUPABASE_ACCESS_TOKEN
 
-case "$code" in
-  2*)
-    cat <<NOTE
+case "$templates" in
+  2*) bold "  Шаблоны применились" ;;
+  *)
+    bold "  Шаблоны не применились — и это нормально"
+    printf '  %s\n' "$(body_of "$response")"
+    bold "  На бесплатном тарифе их менять нельзя. Письмо останется"
+    bold "  заводским, со ссылкой, а приложение умеет её принимать." ;;
+esac
 
-Готово. Письма теперь приходят с шестизначным кодом, а не со ссылкой.
+cat <<NOTE
 
-Проверить: в приложении Профиль → Аккаунт → Привязать почту.
+Готово. Ссылка из письма теперь открывает приложение, а не браузер.
+
+Проверить: Профиль → Аккаунт → Привязать почту → письмо → нажать ссылку.
 Письмо идёт до минуты и любит попадать в «Промоакции» и спам.
 
 NOTE
-    ;;
-  *)
-    # Причину пишет сервер, и выбрасывать её было ошибкой: «не подошёл
-    # токен» и «на бесплатном тарифе так нельзя» выглядят одинаково,
-    # а делать надо разное.
-    warn "  Сервер ответил $code:"
-    printf '%s\n' "$payload"
-    fail "Шаблоны не применились.
-
-Их всегда можно вставить руками: Authentication → Emails → Templates,
-шаблоны «Magic Link» и «Change Email Address». Текст лежит в
-docs/supabase/emails/." ;;
-esac

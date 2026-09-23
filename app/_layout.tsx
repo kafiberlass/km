@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Linking from 'expo-linking';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
@@ -11,6 +12,7 @@ import { describeError, rememberError } from '@/core/errors/lastError';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { seedDemoPlaces } from '@/features/places/seed';
 import { fonts, palette, text } from '@/core/theme/tokens';
+import { handleAuthLink } from '@/features/account/session';
 import { useWalkStore } from '@/store/useWalkStore';
 
 /**
@@ -38,6 +40,28 @@ export default function RootLayout() {
     'Oswald-Regular': require('../assets/fonts/Oswald-Regular.ttf'),
     'VT323-Regular': require('../assets/fonts/VT323-Regular.ttf'),
   });
+
+  /**
+   * Ссылка из письма про вход.
+   *
+   * Слушаем на уровне всего приложения, а не на экране аккаунта: письмо
+   * открывают через час или через день, с закрытым приложением, и телефон
+   * запускает КМ заново, а не возвращает человека туда, где он нажимал
+   * «отправить письмо».
+   *
+   * Отсюда два источника: адрес, которым приложение запустили, и адреса,
+   * приходящие пока оно живёт. Без первого вход по письму работал бы
+   * только при уже открытом приложении — то есть почти никогда.
+   */
+  useEffect(() => {
+    void Linking.getInitialURL().then((url) => handleAuthLink(url));
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void handleAuthLink(url);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   /**
    * Ошибки, случившиеся вне отрисовки: в обработчике нажатия, в ответе

@@ -73,6 +73,16 @@ interface VisitRow {
   visited_at: string;
 }
 
+/**
+ * Адрес, на который письмо возвращает человека.
+ *
+ * Схема `km` объявлена в app.json: телефон видит её и открывает
+ * приложение вместо браузера. Этот же адрес должен быть разрешён
+ * в настройках проекта (Site URL), иначе Supabase молча вернёт
+ * человека на свой адрес по умолчанию — тот самый localhost:3000.
+ */
+export const AUTH_REDIRECT = 'km://auth';
+
 export class SupabaseFriendsProvider implements FriendsProvider {
   readonly id = 'server' as const;
 
@@ -357,16 +367,10 @@ export class SupabaseFriendsProvider implements FriendsProvider {
 
   async linkEmail(email: string): Promise<void> {
     await this.ensureSession();
-    const { error } = await this.client.auth.updateUser({ email });
-    if (error) throw new Error(error.message);
-  }
-
-  async confirmLink(email: string, code: string): Promise<void> {
-    const { error } = await this.client.auth.verifyOtp({
-      email,
-      token: code,
-      type: 'email_change',
-    });
+    const { error } = await this.client.auth.updateUser(
+      { email },
+      { emailRedirectTo: AUTH_REDIRECT },
+    );
     if (error) throw new Error(error.message);
   }
 
@@ -381,21 +385,24 @@ export class SupabaseFriendsProvider implements FriendsProvider {
   async signInByEmail(email: string): Promise<void> {
     const { error } = await this.client.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: false, emailRedirectTo: AUTH_REDIRECT },
     });
     if (error) throw new Error(error.message);
   }
 
-  async confirmSignIn(email: string, code: string): Promise<void> {
-    const { data, error } = await this.client.auth.verifyOtp({
-      email,
-      token: code,
-      type: 'email',
+  /**
+   * Принять сессию, приехавшую по ссылке из письма.
+   *
+   * Сессия меняется целиком: дальше всё — друзья, код, копия — должно
+   * идти от того, кто вошёл, а не от того, кто был в приложении до этого.
+   */
+  async applySession(accessToken: string, refreshToken: string): Promise<void> {
+    const { data, error } = await this.client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
     });
     if (error) throw new Error(error.message);
 
-    // Сессия сменилась: дальше всё — друзья, копия, код — должно идти
-    // от нового человека, а не от того, кто был в приложении до входа.
     this.userId = data.user?.id ?? null;
     this.refresh();
   }
