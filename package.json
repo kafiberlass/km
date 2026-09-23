@@ -9,6 +9,8 @@
     "ios": "expo run:ios",
     "update": "bash scripts/update.sh",
     "build:android": "bash scripts/build-android.sh",
+    "build:cloud": "bash scripts/build-cloud.sh",
+    "apk:cloud": "bash scripts/get-apk-cloud.sh",
     "apk": "bash scripts/get-apk.sh",
     "send": "bash scripts/publish.sh",
     "fonts": "bash scripts/get-fonts.sh",

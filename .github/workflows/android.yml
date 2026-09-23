@@ -1,0 +1,141 @@
+# Сборка приложения для Android силами GitHub.
+#
+# Зачем: у Expo бесплатная квота на сборки месячная и небольшая, а уходит
+# она быстро — несколько неудачных попыток подряд, и до следующего месяца
+# собрать нечего. У GitHub для приватных репозиториев своя квота, около
+# 2000 минут в месяц; одна сборка занимает 15–20, то есть примерно сотня
+# сборок вместо нескольких.
+#
+# Сборка идёт «локально» на машине GitHub (eas build --local): квота Expo
+# при этом не тратится, но подпись и версия берутся с серверов Expo — те
+# же самые, что и раньше. Это важно: приложение с другой подписью Android
+# отказывается ставить поверх старого, пришлось бы удалять и терять всё
+# накопленное.
+#
+# Запуск: вкладка Actions в репозитории → «Сборка для Android» → Run
+# workflow. Или одной командой из терминала: npm run build:cloud
+
+name: Сборка для Android
+
+on:
+  # Кнопка на странице Actions.
+  workflow_dispatch:
+
+  # Автоматически — только когда меняется то, что нельзя доставить по
+  # воздуху: разрешения, зависимости, нативные плагины. Обычные правки
+  # в коде уезжают через npm run send и сборки не требуют.
+  push:
+    paths:
+      - 'app.json'
+      - 'eas.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'plugins/**'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    name: Собрать apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      # У бесплатных машин GitHub около 14 ГБ свободного диска, а сборка
+      # Android съедает изрядно: библиотеки карты и графики компилируются
+      # целиком. Заранее убираем то, что нам точно не нужно.
+      - name: Освободить место на диске
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk \
+                      /opt/ghc /usr/local/share/boost || true
+          df -h /
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Без токена Expo сборка не сможет взять подпись приложения, и
+      # падение выглядело бы как непонятная ошибка в середине. Проверяем
+      # сразу и объясняем, что делать.
+      - name: Проверить токен Expo
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "Нет секрета EXPO_TOKEN."
+            echo
+            echo "Положить его нужно один раз:"
+            echo "  1. expo.dev → аватар справа сверху → Account settings"
+            echo "     → Access tokens → Create token, скопировать."
+            echo "  2. Здесь, на GitHub: Settings → Secrets and variables"
+            echo "     → Actions → New repository secret."
+            echo "     Имя: EXPO_TOKEN, значение: скопированный токен."
+            echo
+            echo "После этого запустите сборку заново."
+            exit 1
+          fi
+          echo "Токен на месте."
+
+      - name: Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Зависимости
+        run: npm ci
+
+      # Ключи Supabase лежат в окружении preview на стороне Expo — туда их
+      # кладёт npm run build:android. Если их там не окажется, приложение
+      # соберётся молча, но с демонстрационными друзьями вместо настоящих.
+      # Это уже случалось и ловилось только по жалобе «у мамы чужие друзья»,
+      # поэтому проверяем заранее и останавливаемся.
+      - name: Проверить ключи
+        run: |
+          list="$(eas env:list --environment preview --non-interactive 2>&1 || true)"
+          missing=0
+          for key in EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
+            printf '%s' "$list" | grep -q "$key" || { echo "Нет ключа $key"; missing=1; }
+          done
+          if [ "$missing" = "1" ]; then
+            echo
+            echo "В окружении preview не хватает ключей Supabase."
+            echo "Выполните на своём компьютере: npm run build:android"
+            echo "— он передаёт ключи из .env в облако Expo. Потом повторите сборку здесь."
+            exit 1
+          fi
+          echo "Ключи на месте."
+
+      - name: Сборка
+        run: eas build --platform android --profile preview --local --non-interactive --output "$GITHUB_WORKSPACE/km.apk"
+
+      - name: Выложить файл
+        uses: actions/upload-artifact@v4
+        with:
+          name: km-apk
+          path: km.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Что дальше
+        run: |
+          size="$(du -h km.apk | cut -f1)"
+          {
+            echo "### Приложение собрано"
+            echo
+            echo "Файл \`km.apk\` ($size) — в разделе **Artifacts** внизу этой страницы."
+            echo
+            echo "1. Скачайте архив, внутри \`km.apk\`."
+            echo "2. Отправьте файл маме в Telegram или WhatsApp."
+            echo "3. Она открывает его на телефоне и разрешает установку."
+            echo
+            echo "Следующие изменения поедут к ней по воздуху: \`npm run send\`."
+          } >> "$GITHUB_STEP_SUMMARY"
